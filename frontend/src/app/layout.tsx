@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Demo TrustBridge - Stellar Wallet",
-  description: "Wallet minimalista para Stellar",
+  title: "TrustBridge - Wallet",
+  description: "Minimalist wallet for Stellar",
 };
 
 export default function RootLayout({
@@ -20,10 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} antialiased font-sans`}
-      >
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} antialiased font-sans`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
