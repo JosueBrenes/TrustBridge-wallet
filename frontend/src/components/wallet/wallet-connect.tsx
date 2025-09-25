@@ -75,28 +75,28 @@ export function WalletConnect({
 
           <div className="text-center text-xs text-muted-foreground">OR</div>
 
-          <Button
-            onClick={onCreateWallet}
-            disabled={isLoading}
-            className="w-full h-9 text-xs"
-            variant="outline"
-          >
-            <Plus className="h-3 w-3 mr-2" />
-            Create New Wallet
-          </Button>
-
-          <div className="text-center text-xs text-muted-foreground">OR</div>
-
-          {!showImport ? (
+          {/* Wallet Options */}
+          <div className="flex gap-3">
+            <Button
+              onClick={onCreateWallet}
+              disabled={isLoading}
+              className="flex-1 h-9 rounded-xl px-4 text-xs"
+              variant="outline"
+            >
+              <Plus className="mr-2 h-3 w-3" />
+              Create New Wallet
+            </Button>
             <Button
               variant="outline"
               onClick={() => setShowImport(true)}
-              className="w-full h-9 text-xs"
+              className="flex-1 h-9 rounded-xl px-4 text-xs"
             >
-              <Download className="h-3 w-3 mr-2" />
+              <Download className="mr-2 h-3 w-3" />
               Import Existing Wallet
             </Button>
-          ) : (
+          </div>
+
+          {showImport && (
             <div className="space-y-2">
               <div className="space-y-1">
                 <Label htmlFor="secret-key" className="text-xs">Secret Key</Label>
@@ -117,14 +117,14 @@ export function WalletConnect({
                     setShowImport(false);
                     setImportSecret("");
                   }}
-                  className="flex-1"
+                  className="flex-1 h-8 text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleImport}
                   disabled={!importSecret.trim() || isLoading}
-                  className="flex-1"
+                  className="flex-1 h-8 text-xs"
                 >
                   Import
                 </Button>
@@ -133,7 +133,7 @@ export function WalletConnect({
           )}
         </div>
 
-        <div className="text-center space-y-1 text-xs text-muted-foreground">
+        <div className="text-center space-y-0 text-xs text-muted-foreground">
           <p>Secure biometric authentication with Passkey</p>
           <p>Stellar Testnet • For testing only</p>
         </div>
