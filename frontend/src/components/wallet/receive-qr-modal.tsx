@@ -38,16 +38,16 @@ export function ReceiveQRModal({ isOpen, onClose, publicKey }: ReceiveQRModalPro
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Mi dirección de TrustBridge Wallet',
-          text: `Envíame XLM a esta dirección: ${publicKey}`,
+          title: 'My TrustBridge Wallet Address',
+          text: `Send me XLM to this address: ${publicKey}`,
           url: `stellar:${publicKey}`,
         });
       } catch {
-        // Si falla el share nativo, copiamos al portapapeles
+        // If native share fails, copy to clipboard
         copyToClipboard();
       }
     } else {
-      // Fallback para navegadores que no soportan Web Share API
+      // Fallback for browsers that don't support Web Share API
       copyToClipboard();
     }
   };
@@ -83,10 +83,10 @@ export function ReceiveQRModal({ isOpen, onClose, publicKey }: ReceiveQRModalPro
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="text-center">
           <DialogTitle className="text-xl font-bold">
-            Recibir Pagos
+            Receive Payments
           </DialogTitle>
           <DialogDescription>
-            Comparte tu código QR o dirección para recibir XLM
+            Share your QR code or address to receive XLM
           </DialogDescription>
         </DialogHeader>
 
@@ -134,7 +134,7 @@ export function ReceiveQRModal({ isOpen, onClose, publicKey }: ReceiveQRModalPro
                 ) : (
                   <Copy className="h-4 w-4" />
                 )}
-                <span>{copied ? 'Copiado' : 'Copiar'}</span>
+                <span>{copied ? 'Copied' : 'Copy'}</span>
               </Button>
 
               <Button
@@ -143,7 +143,7 @@ export function ReceiveQRModal({ isOpen, onClose, publicKey }: ReceiveQRModalPro
                 className="flex items-center space-x-2"
               >
                 <Share2 className="h-4 w-4" />
-                <span>Compartir</span>
+                <span>Share</span>
               </Button>
             </div>
 
@@ -153,19 +153,19 @@ export function ReceiveQRModal({ isOpen, onClose, publicKey }: ReceiveQRModalPro
               className="flex items-center space-x-2"
             >
               <Download className="h-4 w-4" />
-              <span>Descargar QR</span>
+              <span>Download QR</span>
             </Button>
           </div>
 
           {/* Info */}
           <div className="text-center space-y-2">
             <p className="text-xs text-muted-foreground">
-              Comparte este código QR o dirección para recibir pagos en Stellar
+              Share this QR code or address to receive payments on Stellar
             </p>
             <div className="flex items-center justify-center space-x-1">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               <span className="text-xs text-green-600 font-medium">
-                Listo para recibir
+                Ready to receive
               </span>
             </div>
           </div>

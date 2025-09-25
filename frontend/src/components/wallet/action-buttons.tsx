@@ -20,25 +20,25 @@ export function ActionButtons({
 }: ActionButtonsProps) {
   const actions = [
     {
-      label: "Enviar",
+      label: "Send",
       icon: ArrowUpRight,
       onClick: onSend,
       variant: "default" as const
     },
     {
-      label: "Recibir",
+      label: "Receive",
       icon: ArrowDownLeft,
       onClick: onReceive,
       variant: "outline" as const
     },
     {
-      label: "Intercambiar",
+      label: "Swap",
       icon: Repeat,
       onClick: onSwap,
       variant: "outline" as const
     },
     {
-      label: "Comprar",
+      label: "Buy",
       icon: Plus,
       onClick: onBuy,
       variant: "outline" as const
