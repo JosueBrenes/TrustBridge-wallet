@@ -10,6 +10,7 @@ import { BalanceDisplay } from "./balance-display";
 import { ActionButtons } from "./action-buttons";
 import { TokensList } from "./tokens-list";
 import { ReceiveQRModal } from "./receive-qr-modal";
+import { SendModal } from "./send-modal";
 import { WalletHeader } from "./wallet-header";
 import { WalletConnect } from "./wallet-connect";
 
@@ -31,6 +32,7 @@ export default function WalletSection() {
 
   const [viewMode, setViewMode] = useState<ViewMode>("connect");
   const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -141,7 +143,7 @@ export default function WalletSection() {
 
       {/* Action Buttons */}
       <ActionButtons
-        onSend={() => toast.info("Send function coming soon")}
+        onSend={() => setShowSendModal(true)}
         onReceive={() => setShowReceiveModal(true)}
         onSwap={() => toast.info("Swap function coming soon")}
         onBuy={() => toast.info("Buy function coming soon")}
@@ -189,6 +191,12 @@ export default function WalletSection() {
         isOpen={showReceiveModal}
         onClose={() => setShowReceiveModal(false)}
         publicKey={publicKey || ""}
+      />
+
+      {/* Send Modal */}
+      <SendModal
+        isOpen={showSendModal}
+        onClose={() => setShowSendModal(false)}
       />
     </div>
   );

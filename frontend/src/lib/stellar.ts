@@ -1,4 +1,14 @@
-import { Keypair, Networks, rpc, Horizon } from "@stellar/stellar-sdk";
+import { 
+  Keypair, 
+  Networks, 
+  rpc, 
+  Horizon, 
+  TransactionBuilder, 
+  Operation, 
+  Asset, 
+  BASE_FEE,
+  Memo 
+} from "@stellar/stellar-sdk";
 
 const { Server } = Horizon;
 
@@ -77,6 +87,83 @@ export async function getAccountBalance(publicKey: string) {
     }
 
     throw error;
+  }
+}
+
+// Send payment transaction
+export async function sendPayment(
+  senderSecretKey: string,
+  destinationPublicKey: string,
+  amount: string,
+  memo?: string
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  try {
+    // Get sender keypair
+    const senderKeypair = Keypair.fromSecret(senderSecretKey);
+    const senderPublicKey = senderKeypair.publicKey();
+
+    // Load sender account
+    const senderAccount = await horizonServer.loadAccount(senderPublicKey);
+
+    // Create transaction
+    const transaction = new TransactionBuilder(senderAccount, {
+      fee: BASE_FEE,
+      networkPassphrase: STELLAR_CONFIG.networkPassphrase,
+    })
+      .addOperation(
+        Operation.payment({
+          destination: destinationPublicKey,
+          asset: Asset.native(), // XLM
+          amount: amount,
+        })
+      )
+      .setTimeout(30); // 30 seconds timeout
+
+    // Add memo if provided
+    if (memo && memo.trim()) {
+      transaction.addMemo(Memo.text(memo.trim()));
+    }
+
+    // Build and sign transaction
+    const builtTransaction = transaction.build();
+    builtTransaction.sign(senderKeypair);
+
+    // Submit transaction
+    const result = await horizonServer.submitTransaction(builtTransaction);
+
+    return {
+      success: true,
+      transactionHash: result.hash,
+    };
+  } catch (error: unknown) {
+    console.error("Error sending payment:", error);
+
+    let errorMessage = "Failed to send payment";
+
+    if (error && typeof error === "object") {
+      if ("response" in error) {
+        const response = (error as { response?: { data?: { extras?: { result_codes?: { transaction?: string; operations?: string[] } } } } }).response;
+        if (response?.data?.extras?.result_codes) {
+          const resultCodes = response.data.extras.result_codes;
+          if (resultCodes.transaction === "tx_insufficient_balance") {
+            errorMessage = "Insufficient balance to complete the transaction";
+          } else if (resultCodes.transaction === "tx_bad_seq") {
+            errorMessage = "Transaction sequence error. Please try again";
+          } else if (resultCodes.operations?.includes("op_no_destination")) {
+            errorMessage = "Destination account does not exist";
+          } else if (resultCodes.operations?.includes("op_underfunded")) {
+            errorMessage = "Insufficient funds for this transaction";
+          }
+        }
+      } else if ("message" in error) {
+        errorMessage = (error as Error).message;
+      }
+    }
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
   }
 }
 

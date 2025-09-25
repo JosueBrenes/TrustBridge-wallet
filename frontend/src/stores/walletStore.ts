@@ -4,6 +4,7 @@ import {
   getKeypairFromSecret,
   getAccountBalance,
   fundTestnetAccount,
+  sendPayment,
 } from "@/lib/stellar";
 
 interface WalletState {
@@ -27,6 +28,7 @@ interface WalletActions {
   disconnect: () => void;
   refreshBalance: () => Promise<void>;
   fundAccount: () => Promise<void>;
+  sendMoney: (destinationPublicKey: string, amount: string, memo?: string) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
   startAutoRefresh: () => void;
   stopAutoRefresh: () => void;
   setError: (error: string | null) => void;
@@ -233,6 +235,40 @@ export const useWalletStore = create<WalletStore>((set, get) => ({
         isLoading: false,
         error: 'Failed to fund account. Please try again.',
       }));
+    }
+  },
+
+  sendMoney: async (destinationPublicKey: string, amount: string, memo?: string) => {
+    const { secretKey } = get();
+    
+    if (!secretKey) {
+      return {
+        success: false,
+        error: "No wallet connected. Please create or import a wallet first.",
+      };
+    }
+
+    try {
+      set({ isLoading: true, error: null });
+
+      const result = await sendPayment(secretKey, destinationPublicKey, amount, memo);
+
+      if (result.success) {
+        // Refresh balance after successful transaction
+        setTimeout(() => {
+          get().refreshBalance();
+        }, 2000);
+      }
+
+      set({ isLoading: false });
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send payment';
+      set({ isLoading: false, error: errorMessage });
+      return {
+        success: false,
+        error: errorMessage,
+      };
     }
   },
 
