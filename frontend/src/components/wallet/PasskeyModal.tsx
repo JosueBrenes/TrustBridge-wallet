@@ -131,7 +131,7 @@ export const PasskeyModal: React.FC<PasskeyModalProps> = ({
   if (!webAuthnSupported) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center">
               WebAuthn Not Supported
@@ -153,7 +153,7 @@ export const PasskeyModal: React.FC<PasskeyModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-center flex items-center justify-center gap-2">
             <Fingerprint className="w-6 h-6 text-primary" />

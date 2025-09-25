@@ -80,7 +80,7 @@ export function ReceiveQRModal({ isOpen, onClose, publicKey }: ReceiveQRModalPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader className="text-center">
           <DialogTitle className="text-xl font-bold">
             Receive Payments
