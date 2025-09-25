@@ -39,9 +39,16 @@ export function CreateWalletFlow({ onWalletCreated, onBack }: CreateWalletFlowPr
     ];
     
     const phrase = [];
-    for (let i = 0; i < 12; i++) {
-      phrase.push(words[Math.floor(Math.random() * words.length)]);
+    const usedWords = new Set<string>();
+    
+    while (phrase.length < 12) {
+      const randomWord = words[Math.floor(Math.random() * words.length)];
+      if (!usedWords.has(randomWord)) {
+        phrase.push(randomWord);
+        usedWords.add(randomWord);
+      }
     }
+    
     return phrase;
   };
 
@@ -119,10 +126,33 @@ export function CreateWalletFlow({ onWalletCreated, onBack }: CreateWalletFlowPr
 
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success('Recovery phrase copied to clipboard');
+      // Check if clipboard API is available
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        toast.success('Recovery phrase copied to clipboard');
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          document.execCommand('copy');
+          toast.success('Recovery phrase copied to clipboard');
+        } catch (fallbackErr) {
+          toast.error('Failed to copy to clipboard. Please copy manually.');
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
     } catch (err) {
-      toast.error('Failed to copy to clipboard');
+      console.error('Clipboard error:', err);
+      toast.error('Failed to copy to clipboard. Please copy manually.');
     }
   };
 
