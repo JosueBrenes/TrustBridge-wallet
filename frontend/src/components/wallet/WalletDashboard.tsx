@@ -4,23 +4,18 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { 
   Zap, 
   Send, 
   QrCode, 
   ArrowUpDown, 
-  TrendingUp, 
   Eye, 
   EyeOff,
   Copy,
   ExternalLink,
-  Plus,
-  Minus
 } from "lucide-react";
 import { toast } from "sonner";
 import { useWalletStore } from "@/stores/walletStore";
-import { BalanceDisplay } from "./balance-display";
 import { TokensList } from "./tokens-list";
 import { ReceiveQRModal } from "./receive-qr-modal";
 import { SendModal } from "./send-modal";
@@ -126,7 +121,7 @@ export default function WalletDashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Button
               variant="outline"
               size="sm"
@@ -156,16 +151,6 @@ export default function WalletDashboard() {
             >
               <ArrowUpDown className="h-4 w-4" />
               <span className="text-xs">Swap</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDeFiModal(true)}
-              disabled={isLoading}
-              className="flex flex-col gap-1 h-auto py-3"
-            >
-              <TrendingUp className="h-4 w-4" />
-              <span className="text-xs">DeFi</span>
             </Button>
           </div>
         </CardContent>

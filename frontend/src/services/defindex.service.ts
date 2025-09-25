@@ -1,4 +1,18 @@
 // ApiClient class for DeFindex API integration
+
+interface ApiResponse {
+  [key: string]: unknown;
+}
+
+interface DepositWithdrawParams {
+  amounts: number[];
+  from: string;
+}
+
+interface SendParams {
+  xdr: string;
+}
+
 class ApiClient {
   private readonly apiUrl = "api.defindex.io";
   private readonly apiKey: string;
@@ -8,7 +22,7 @@ class ApiClient {
   }
 
   // Helper for POST requests
-  async postData(endpoint: string, vaultAddress: string, params: Record<string, any>): Promise<any> {
+  async postData(endpoint: string, vaultAddress: string, params: DepositWithdrawParams | SendParams): Promise<ApiResponse> {
     const response = await fetch(`https://${this.apiUrl}/vault/${vaultAddress}/${endpoint}`, {
       method: 'POST',
       headers: {
@@ -21,7 +35,7 @@ class ApiClient {
   }
 
   // Helper for GET requests
-  async getData(endpoint: string, vaultAddress: string, params?: Record<string, any>): Promise<any> {
+  async getData(endpoint: string, vaultAddress: string, params?: Record<string, string>): Promise<ApiResponse> {
     const url = params
       ? `https://${this.apiUrl}/vault/${vaultAddress}/${endpoint}?${new URLSearchParams(params).toString()}`
       : `https://${this.apiUrl}/vault/${vaultAddress}/${endpoint}`;
@@ -51,7 +65,7 @@ const signerFunction = (unsignedTx: string): string => {
 };
 
 // Core DeFindex functions
-async function deposit(amount: number, user: string, vaultAddress: string = DEFAULT_VAULT): Promise<any> {
+async function deposit(amount: number, user: string, vaultAddress: string = DEFAULT_VAULT): Promise<ApiResponse> {
   // Step 1: Request an unsigned transaction from the API
   const { xdr: unsignedTx } = await apiClient.postData("deposit", vaultAddress, {
     amounts: [amount],
@@ -59,7 +73,7 @@ async function deposit(amount: number, user: string, vaultAddress: string = DEFA
   });
 
   // Step 2: Sign the transaction
-  const signedTx = signerFunction(unsignedTx);
+  const signedTx = signerFunction(unsignedTx as string);
 
   // Step 3: Send the signed transaction back to the API
   const response = await apiClient.postData("send", vaultAddress, {
@@ -68,13 +82,13 @@ async function deposit(amount: number, user: string, vaultAddress: string = DEFA
   return response;
 }
 
-async function withdraw(amount: number, user: string, vaultAddress: string = DEFAULT_VAULT): Promise<any> {
+async function withdraw(amount: number, user: string, vaultAddress: string = DEFAULT_VAULT): Promise<ApiResponse> {
   const { xdr: unsignedTx } = await apiClient.postData("withdraw", vaultAddress, {
     amounts: [amount],
     from: user
   });
 
-  const signedTx = signerFunction(unsignedTx);
+  const signedTx = signerFunction(unsignedTx as string);
 
   const response = await apiClient.postData("send", vaultAddress, {
     xdr: signedTx
@@ -94,8 +108,8 @@ async function balance(user: string, vaultAddress: string = DEFAULT_VAULT): Prom
     // Handle different possible response structures
     if (response.underlyingBalance && Array.isArray(response.underlyingBalance)) {
       return BigInt(response.underlyingBalance[0]);
-    } else if (response.balance !== undefined) {
-      return BigInt(response.balance);
+    } else if (response.balance !== undefined && response.balance !== null) {
+      return BigInt(response.balance as string | number);
     } else if (typeof response === 'string' || typeof response === 'number') {
       return BigInt(response);
     } else {
@@ -110,7 +124,7 @@ async function balance(user: string, vaultAddress: string = DEFAULT_VAULT): Prom
 
 async function apy(vaultAddress: string = DEFAULT_VAULT): Promise<number> {
   const { apy: apyValue } = await apiClient.getData("apy", vaultAddress);
-  return apyValue;
+  return apyValue as number;
 }
 
 export interface Strategy {
@@ -143,7 +157,7 @@ export class DefindexService {
     }
   }
 
-  static async depositFunds(amount: string, userAddress: string, vaultAddress: string = DEFAULT_VAULT): Promise<any> {
+  static async depositFunds(amount: string, userAddress: string, vaultAddress: string = DEFAULT_VAULT): Promise<ApiResponse> {
     try {
       const result = await deposit(Number(amount), userAddress, vaultAddress);
       return result;
@@ -153,7 +167,7 @@ export class DefindexService {
     }
   }
 
-  static async withdrawFunds(amount: string, userAddress: string, vaultAddress: string = DEFAULT_VAULT): Promise<any> {
+  static async withdrawFunds(amount: string, userAddress: string, vaultAddress: string = DEFAULT_VAULT): Promise<ApiResponse> {
     try {
       const result = await withdraw(Number(amount), userAddress, vaultAddress);
       return result;

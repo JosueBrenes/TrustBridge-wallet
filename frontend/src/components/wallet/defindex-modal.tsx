@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -75,7 +75,7 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
   });
 
   // Load portfolio data from localStorage
-  const loadPortfolioData = () => {
+  const loadPortfolioData = useCallback(() => {
     if (!publicKey) return;
     
     const stored = localStorage.getItem(`defindex_portfolio_${publicKey}`);
@@ -87,7 +87,7 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
         console.error('Error loading portfolio data:', error);
       }
     }
-  };
+  }, [publicKey]);
 
   // Save portfolio data to localStorage
   const savePortfolioData = (data: PortfolioData) => {
@@ -97,7 +97,7 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
     setPortfolioData(data);
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
       const strategiesData = await DefindexService.getStrategies();
@@ -121,14 +121,14 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [publicKey]);
 
   useEffect(() => {
     if (isOpen && publicKey) {
       loadPortfolioData();
       loadData();
     }
-  }, [isOpen, publicKey]);
+  }, [isOpen, publicKey, loadPortfolioData, loadData]);
 
   const handleStrategySelect = (strategy: Strategy) => {
     setSelectedStrategy(strategy);

@@ -1,17 +1,15 @@
 "use client";
 
 import { useWalletStore } from "@/stores/walletStore";
-import WalletSidebar from "@/components/layout/WalletSidebar";
-import WalletDashboard from "@/components/wallet/WalletDashboard";
 import { CreateWalletFlow } from "@/components/wallet/create-wallet-flow";
 import { WalletConnect } from "@/components/wallet/wallet-connect";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-type ViewMode = "connect" | "create-flow" | "wallet";
+type ViewMode = "connect" | "create-flow";
 
-export default function WalletPage() {
+export default function HomePage() {
   const {
-    publicKey,
     isConnected,
     isLoading,
     createWallet,
@@ -20,6 +18,14 @@ export default function WalletPage() {
   } = useWalletStore();
 
   const [viewMode, setViewMode] = useState<ViewMode>("connect");
+  const router = useRouter();
+
+  // Redirect to wallet if already connected
+  useEffect(() => {
+    if (isConnected) {
+      router.push("/wallet");
+    }
+  }, [isConnected, router]);
 
   const handleCreateWallet = () => {
     setViewMode("create-flow");
@@ -27,7 +33,7 @@ export default function WalletPage() {
 
   const handleWalletCreated = () => {
     createWallet();
-    setViewMode("wallet");
+    // Will redirect via useEffect when isConnected becomes true
   };
 
   const handleBackToConnect = () => {
@@ -36,7 +42,7 @@ export default function WalletPage() {
 
   const handleImportWallet = (secretKey: string) => {
     importWallet(secretKey);
-    setViewMode("wallet");
+    // Will redirect via useEffect when isConnected becomes true
   };
 
   const handlePasskeySuccess = (walletAddress: string, token: string) => {
@@ -53,39 +59,30 @@ export default function WalletPage() {
       // Fallback: use importWallet if no passkey data found
       importWallet(walletAddress);
     }
-
-    setViewMode("wallet");
+    // Will redirect via useEffect when isConnected becomes true
   };
 
-  // If not connected, show connection screen or creation flow without sidebar
-  if (!isConnected) {
-    if (viewMode === "create-flow") {
-      return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          <CreateWalletFlow
-            onWalletCreated={handleWalletCreated}
-            onBack={handleBackToConnect}
-          />
-        </div>
-      );
-    }
-
+  // Show creation flow
+  if (viewMode === "create-flow") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <WalletConnect
-          onCreateWallet={handleCreateWallet}
-          onImportWallet={handleImportWallet}
-          onPasskeySuccess={handlePasskeySuccess}
-          isLoading={isLoading}
+        <CreateWalletFlow
+          onWalletCreated={handleWalletCreated}
+          onBack={handleBackToConnect}
         />
       </div>
     );
   }
 
-  // If connected, show the dashboard with sidebar
+  // Show connection screen
   return (
-    <WalletSidebar>
-      <WalletDashboard />
-    </WalletSidebar>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <WalletConnect
+        onCreateWallet={handleCreateWallet}
+        onImportWallet={handleImportWallet}
+        onPasskeySuccess={handlePasskeySuccess}
+        isLoading={isLoading}
+      />
+    </div>
   );
 }

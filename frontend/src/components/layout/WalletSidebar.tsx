@@ -59,8 +59,8 @@ import {
 } from "lucide-react";
 import WalletHeader from "./WalletHeader";
 
-interface WalletSidebarProps {
-  children?: React.ReactNode;
+interface AppSidebarProps {
+  children: React.ReactNode;
 }
 
 // Team data for header
@@ -438,10 +438,10 @@ export default function Sidebar({ children }: AppSidebarProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="flex flex-col min-h-screen bg-transparent">
+      <SidebarInset className="flex flex-col min-h-screen">
         <WalletHeader />
-        <main className="flex-1 overflow-auto">
-          <div className="container mx-auto py-6 px-4 md:px-6 lg:px-8 max-w-7xl">
+        <main className="flex-1 overflow-auto bg-background">
+          <div className="container mx-auto p-6 max-w-6xl">
             {children}
           </div>
         </main>

@@ -151,7 +151,6 @@ export default function WalletSection() {
         onReceive={() => setShowReceiveModal(true)}
         onSwap={() => setShowSwapModal(true)}
         onBuy={() => toast.info("Buy function coming soon")}
-        onDeFi={() => setShowDeFiModal(true)}
         disabled={isLoading}
       />
 

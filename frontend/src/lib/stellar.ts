@@ -158,9 +158,11 @@ export async function swapXLMToUSDC(
 
     // Check if account has USDC trustline
     const hasUSDCTrustline = senderAccount.balances.some(
-      (balance: any) =>
+      (balance: Horizon.HorizonApi.BalanceLine) =>
         balance.asset_type !== "native" &&
+        "asset_code" in balance &&
         balance.asset_code === "USDC" &&
+        "asset_issuer" in balance &&
         balance.asset_issuer === USDC_ASSET.getIssuer()
     );
 
@@ -212,7 +214,7 @@ export async function swapXLMToUSDC(
         const operations = await transactionRecord.operations();
         const pathPaymentOp = operations.records.find(
           (op: any) => op.type === "path_payment_strict_send"
-        ) as any;
+        ) as Horizon.HorizonApi.PathPaymentStrictSendOperationResponse;
         if (pathPaymentOp) {
           receivedAmount = pathPaymentOp.amount;
         }

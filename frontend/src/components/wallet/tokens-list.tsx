@@ -1,10 +1,10 @@
 "use client"
 
-import { Star, TrendingUp, TrendingDown, Coins, Plus } from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, TrendingDown, Coins, Plus } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 
 interface Token {
   symbol: string
