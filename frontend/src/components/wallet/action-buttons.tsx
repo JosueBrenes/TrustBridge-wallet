@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowUpRight, ArrowDownLeft, Repeat, Plus } from "lucide-react"
+import { ArrowUpRight, ArrowDownLeft, Repeat, Plus, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface ActionButtonsProps {
@@ -8,6 +8,7 @@ interface ActionButtonsProps {
   onReceive?: () => void
   onSwap?: () => void
   onBuy?: () => void
+  onDeFi?: () => void
   disabled?: boolean
 }
 
@@ -16,6 +17,7 @@ export function ActionButtons({
   onReceive, 
   onSwap, 
   onBuy, 
+  onDeFi,
   disabled = false 
 }: ActionButtonsProps) {
   const actions = [
@@ -42,11 +44,17 @@ export function ActionButtons({
       icon: Plus,
       onClick: onBuy,
       variant: "outline" as const
+    },
+    {
+      label: "DeFi",
+      icon: TrendingUp,
+      onClick: onDeFi,
+      variant: "outline" as const
     }
   ]
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4">
       {actions.map((action) => {
         const Icon = action.icon
         return (

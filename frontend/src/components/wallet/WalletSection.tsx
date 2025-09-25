@@ -14,6 +14,7 @@ import { SendModal } from "./send-modal";
 import { SwapModal } from "./swap-modal";
 import { WalletHeader } from "./wallet-header";
 import { WalletConnect } from "./wallet-connect";
+import { DeFiModal } from "./defi-modal";
 
 type ViewMode = "connect" | "create-flow" | "wallet";
 
@@ -35,6 +36,7 @@ export default function WalletSection() {
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
+  const [showDeFiModal, setShowDeFiModal] = useState(false);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -149,6 +151,7 @@ export default function WalletSection() {
         onReceive={() => setShowReceiveModal(true)}
         onSwap={() => setShowSwapModal(true)}
         onBuy={() => toast.info("Buy function coming soon")}
+        onDeFi={() => setShowDeFiModal(true)}
         disabled={isLoading}
       />
 
@@ -205,6 +208,12 @@ export default function WalletSection() {
       <SwapModal
         isOpen={showSwapModal}
         onClose={() => setShowSwapModal(false)}
+      />
+
+      {/* DeFi Modal */}
+      <DeFiModal
+        isOpen={showDeFiModal}
+        onClose={() => setShowDeFiModal(false)}
       />
     </div>
   );
