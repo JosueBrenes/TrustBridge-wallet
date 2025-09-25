@@ -24,6 +24,7 @@ export default function WalletSection() {
     isConnected,
     createWallet,
     importWallet,
+    connectPasskeyWallet,
     fundAccount,
     disconnect,
   } = useWalletStore();
@@ -51,6 +52,24 @@ export default function WalletSection() {
 
   const handleImportWallet = (secretKey: string) => {
     importWallet(secretKey);
+    setViewMode("wallet");
+  };
+
+  const handlePasskeySuccess = (walletAddress: string, token: string) => {
+    // Store the passkey authentication info
+    localStorage.setItem("passkeyWalletAddress", walletAddress);
+    localStorage.setItem("authToken", token);
+    
+    // Get the secret key from localStorage (set by the passkey hook)
+    const passkeyData = localStorage.getItem("passkeyWalletData");
+    if (passkeyData) {
+      const { secretKey } = JSON.parse(passkeyData);
+      connectPasskeyWallet(walletAddress, secretKey);
+    } else {
+      // Fallback: use importWallet if no passkey data found
+      importWallet(walletAddress);
+    }
+    
     setViewMode("wallet");
   };
 
@@ -90,6 +109,7 @@ export default function WalletSection() {
       <WalletConnect
         onCreateWallet={handleCreateWallet}
         onImportWallet={handleImportWallet}
+        onPasskeySuccess={handlePasskeySuccess}
         isLoading={isLoading}
       />
     );

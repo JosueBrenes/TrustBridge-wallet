@@ -1,26 +1,30 @@
 "use client"
 
-import { Wallet, Plus, Download } from "lucide-react"
+import { Wallet, Plus, Download, Fingerprint } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { useState } from "react"
+import { PasskeyModal } from "./PasskeyModal"
 
 interface WalletConnectProps {
   onCreateWallet: () => void
   onImportWallet: (secretKey: string) => void
+  onPasskeySuccess: (walletAddress: string, token: string) => void
   isLoading?: boolean
 }
 
 export function WalletConnect({ 
   onCreateWallet, 
   onImportWallet, 
+  onPasskeySuccess,
   isLoading = false 
 }: WalletConnectProps) {
   const [importSecret, setImportSecret] = useState("")
   const [showImport, setShowImport] = useState(false)
+  const [showPasskeyModal, setShowPasskeyModal] = useState(false)
 
   const handleImport = () => {
     if (importSecret.trim()) {
@@ -47,11 +51,34 @@ export function WalletConnect({
         </div>
 
         <div className="space-y-4">
+          {/* Passkey Authentication - Featured Option */}
+          <Button 
+            onClick={() => setShowPasskeyModal(true)}
+            disabled={isLoading}
+            className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            size="lg"
+          >
+            <Fingerprint className="h-5 w-5 mr-2" />
+            Connect with Passkey
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <Separator className="w-full" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                OR
+              </span>
+            </div>
+          </div>
+
           <Button 
             onClick={onCreateWallet}
             disabled={isLoading}
             className="w-full h-12"
             size="lg"
+            variant="outline"
           >
             <Plus className="h-5 w-5 mr-2" />
             Create New Wallet
@@ -115,10 +142,18 @@ export function WalletConnect({
           )}
         </div>
 
-        <div className="text-center text-xs text-muted-foreground">
+        <div className="text-center text-xs text-muted-foreground space-y-1">
+          <p>Secure biometric authentication with Passkey</p>
           <p>Stellar Testnet • For testing only</p>
         </div>
       </Card>
+
+      {/* Passkey Modal */}
+      <PasskeyModal
+        isOpen={showPasskeyModal}
+        onClose={() => setShowPasskeyModal(false)}
+        onSuccess={onPasskeySuccess}
+      />
     </div>
   )
 }

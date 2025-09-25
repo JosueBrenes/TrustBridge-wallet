@@ -23,6 +23,7 @@ interface WalletState {
 interface WalletActions {
   createWallet: () => void;
   importWallet: (secretKey: string) => void;
+  connectPasskeyWallet: (publicKey: string, secretKey: string) => void;
   disconnect: () => void;
   refreshBalance: () => Promise<void>;
   fundAccount: () => Promise<void>;
@@ -112,6 +113,40 @@ export const useWalletStore = create<WalletStore>((set, get) => ({
         ...state,
         isLoading: false,
         error: 'Failed to import wallet. Please check your secret key.',
+      }));
+    }
+  },
+
+  connectPasskeyWallet: (publicKey: string, secretKey: string) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      // Save to localStorage with passkey flag
+      localStorage.setItem(
+        "stellar-wallet",
+        JSON.stringify({
+          publicKey,
+          secretKey,
+          isPasskey: true,
+        })
+      );
+
+      set({
+        publicKey,
+        secretKey,
+        isConnected: true,
+        balance: [],
+        isLoading: false,
+        error: null,
+      });
+
+      // Start auto refresh
+      get().startAutoRefresh();
+    } catch {
+      set((state) => ({
+        ...state,
+        isLoading: false,
+        error: 'Failed to connect passkey wallet. Please try again.',
       }));
     }
   },
