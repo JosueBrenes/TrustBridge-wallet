@@ -1,17 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { useWallet } from '@/hooks/useWallet';
-import { WalletConnect } from './wallet/wallet-connect';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Zap } from 'lucide-react';
+import { toast } from 'sonner';
+import { useWalletStore } from '@/stores/walletStore';
 import { CreateWalletFlow } from './wallet/create-wallet-flow';
-import { WalletHeader } from './wallet/wallet-header';
 import { BalanceDisplay } from './wallet/balance-display';
 import { ActionButtons } from './wallet/action-buttons';
 import { TokensList } from './wallet/tokens-list';
-import { Card } from './ui/card';
-import { Button } from './ui/button';
-import { RefreshCw, Zap } from 'lucide-react';
-import { toast } from 'sonner';
+import { ReceiveQRModal } from './wallet/receive-qr-modal';
+import { WalletHeader } from './wallet/wallet-header';
+import { WalletConnect } from './wallet/wallet-connect';
 
 type ViewMode = 'connect' | 'create-flow' | 'wallet';
 
@@ -25,12 +28,12 @@ export default function WalletSection() {
     isConnected,
     createWallet,
     importWallet,
-    refreshBalance,
     fundAccount,
     disconnect
-  } = useWallet();
+  } = useWalletStore();
 
   const [viewMode, setViewMode] = useState<ViewMode>('connect');
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -114,7 +117,7 @@ export default function WalletSection() {
       {/* Action Buttons */}
       <ActionButtons
         onSend={() => toast.info('Send function coming soon')}
-        onReceive={() => copyToClipboard(publicKey || '')}
+        onReceive={() => setShowReceiveModal(true)}
         onSwap={() => toast.info('Swap function coming soon')}
         onBuy={() => toast.info('Buy function coming soon')}
         disabled={isLoading}
@@ -131,31 +134,18 @@ export default function WalletSection() {
 
       {/* Utility Actions */}
       <div className="p-4 border-t border-border space-y-3">
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refreshBalance}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              await fundAccount();
-            }}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            <Zap className="h-4 w-4 mr-2" />
-            Test Funds
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={async () => {
+            await fundAccount();
+          }}
+          disabled={isLoading}
+          className="w-full"
+        >
+          <Zap className="h-4 w-4 mr-2" />
+          Test Funds
+        </Button>
 
         <Button
           variant="ghost"
@@ -166,6 +156,13 @@ export default function WalletSection() {
           Disconnect Wallet
         </Button>
       </div>
+
+      {/* Receive QR Modal */}
+      <ReceiveQRModal
+        isOpen={showReceiveModal}
+        onClose={() => setShowReceiveModal(false)}
+        publicKey={publicKey || ''}
+      />
     </div>
   );
 }
