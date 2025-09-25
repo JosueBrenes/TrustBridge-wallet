@@ -1,13 +1,13 @@
-import { 
-  Keypair, 
-  Networks, 
-  rpc, 
-  Horizon, 
-  TransactionBuilder, 
-  Operation, 
-  Asset, 
+import {
+  Keypair,
+  Networks,
+  rpc,
+  Horizon,
+  TransactionBuilder,
+  Operation,
+  Asset,
   BASE_FEE,
-  Memo 
+  Memo,
 } from "@stellar/stellar-sdk";
 
 const { Server } = Horizon;
@@ -90,7 +90,189 @@ export async function getAccountBalance(publicKey: string) {
   }
 }
 
-// Send payment transaction
+// USDC Asset on Stellar Testnet (Circle's USDC)
+export const USDC_ASSET = new Asset(
+  "USDC",
+  "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5" // Circle's USDC issuer on testnet
+);
+
+// Get orderbook for XLM/USDC pair
+export async function getOrderbook(selling: Asset, buying: Asset) {
+  try {
+    const orderbook = await horizonServer.orderbook(selling, buying).call();
+    return orderbook;
+  } catch (error) {
+    console.error("Error fetching orderbook:", error);
+    throw error;
+  }
+}
+
+// Get current market price for XLM/USDC
+export async function getMarketPrice(): Promise<{
+  price: string;
+  spread: string;
+}> {
+  try {
+    const orderbook = await getOrderbook(Asset.native(), USDC_ASSET);
+
+    if (orderbook.bids.length === 0 || orderbook.asks.length === 0) {
+      throw new Error("No market data available");
+    }
+
+    const bestBid = parseFloat(orderbook.bids[0].price);
+    const bestAsk = parseFloat(orderbook.asks[0].price);
+    const midPrice = (bestBid + bestAsk) / 2;
+    const spread = (((bestAsk - bestBid) / midPrice) * 100).toFixed(2);
+
+    return {
+      price: midPrice.toFixed(6),
+      spread: spread,
+    };
+  } catch (error) {
+    console.error("Error getting market price:", error);
+    // Fallback price if market data is unavailable
+    return {
+      price: "0.120000", // Approximate XLM/USDC price
+      spread: "0.50",
+    };
+  }
+}
+
+// Swap XLM to USDC using path payment
+export async function swapXLMToUSDC(
+  senderSecretKey: string,
+  xlmAmount: string,
+  minUSDCAmount: string
+): Promise<{
+  success: boolean;
+  transactionHash?: string;
+  error?: string;
+  receivedAmount?: string;
+}> {
+  try {
+    const senderKeypair = Keypair.fromSecret(senderSecretKey);
+    const senderPublicKey = senderKeypair.publicKey();
+
+    // Load sender account
+    const senderAccount = await horizonServer.loadAccount(senderPublicKey);
+
+    // Check if account has USDC trustline
+    const hasUSDCTrustline = senderAccount.balances.some(
+      (balance: any) =>
+        balance.asset_type !== "native" &&
+        balance.asset_code === "USDC" &&
+        balance.asset_issuer === USDC_ASSET.getIssuer()
+    );
+
+    // Create transaction builder
+    const transactionBuilder = new TransactionBuilder(senderAccount, {
+      fee: BASE_FEE,
+      networkPassphrase: STELLAR_CONFIG.networkPassphrase,
+    });
+
+    // Add trustline for USDC if it doesn't exist
+    if (!hasUSDCTrustline) {
+      transactionBuilder.addOperation(
+        Operation.changeTrust({
+          asset: USDC_ASSET,
+          limit: "1000000", // 1M USDC limit
+        })
+      );
+    }
+
+    // Add path payment operation
+    transactionBuilder.addOperation(
+      Operation.pathPaymentStrictSend({
+        sendAsset: Asset.native(),
+        sendAmount: xlmAmount,
+        destination: senderPublicKey, // Send to self
+        destAsset: USDC_ASSET,
+        destMin: minUSDCAmount,
+        path: [], // Direct conversion, no intermediate assets
+      })
+    );
+
+    // Set timeout and build transaction
+    const transaction = transactionBuilder.setTimeout(30).build();
+    transaction.sign(senderKeypair);
+
+    // Submit transaction
+    const result = await horizonServer.submitTransaction(transaction);
+
+    // Parse the result to get received amount
+    let receivedAmount = "0";
+    if (result.successful) {
+      // Try to extract the received amount from transaction result
+      try {
+        // Get the transaction details to extract the received amount
+        const transactionRecord = await horizonServer
+          .transactions()
+          .transaction(result.hash)
+          .call();
+        const operations = await transactionRecord.operations();
+        const pathPaymentOp = operations.records.find(
+          (op: any) => op.type === "path_payment_strict_send"
+        ) as any;
+        if (pathPaymentOp) {
+          receivedAmount = pathPaymentOp.amount;
+        }
+      } catch (e) {
+        console.warn("Could not extract received amount:", e);
+      }
+    }
+
+    return {
+      success: true,
+      transactionHash: result.hash,
+      receivedAmount,
+    };
+  } catch (error: unknown) {
+    console.error("Error swapping XLM to USDC:", error);
+
+    let errorMessage = "Failed to swap XLM to USDC";
+
+    if (error && typeof error === "object") {
+      if ("response" in error) {
+        const response = (
+          error as {
+            response?: {
+              data?: {
+                extras?: {
+                  result_codes?: {
+                    transaction?: string;
+                    operations?: string[];
+                  };
+                };
+              };
+            };
+          }
+        ).response;
+        if (response?.data?.extras?.result_codes) {
+          const resultCodes = response.data.extras.result_codes;
+          if (resultCodes.transaction === "tx_insufficient_balance") {
+            errorMessage = "Insufficient XLM balance for swap";
+          } else if (resultCodes.operations?.includes("op_over_source_max")) {
+            errorMessage = "Swap amount exceeds maximum allowed";
+          } else if (resultCodes.operations?.includes("op_under_dest_min")) {
+            errorMessage =
+              "Swap would result in less USDC than minimum specified";
+          } else if (resultCodes.operations?.includes("op_too_few_offers")) {
+            errorMessage = "Not enough liquidity available for this swap";
+          } else if (resultCodes.operations?.includes("op_line_full")) {
+            errorMessage = "USDC trustline limit would be exceeded";
+          }
+        }
+      } else if ("message" in error) {
+        errorMessage = (error as Error).message;
+      }
+    }
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+}
 export async function sendPayment(
   senderSecretKey: string,
   destinationPublicKey: string,
@@ -142,7 +324,20 @@ export async function sendPayment(
 
     if (error && typeof error === "object") {
       if ("response" in error) {
-        const response = (error as { response?: { data?: { extras?: { result_codes?: { transaction?: string; operations?: string[] } } } } }).response;
+        const response = (
+          error as {
+            response?: {
+              data?: {
+                extras?: {
+                  result_codes?: {
+                    transaction?: string;
+                    operations?: string[];
+                  };
+                };
+              };
+            };
+          }
+        ).response;
         if (response?.data?.extras?.result_codes) {
           const resultCodes = response.data.extras.result_codes;
           if (resultCodes.transaction === "tx_insufficient_balance") {

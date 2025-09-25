@@ -27,10 +27,10 @@ export function ReceiveQRModal({ isOpen, onClose, publicKey }: ReceiveQRModalPro
     try {
       await navigator.clipboard.writeText(publicKey);
       setCopied(true);
-      toast.success('¡Dirección copiada al portapapeles!');
+      toast.success('Address copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Error al copiar la dirección');
+      toast.error('Error copying address');
     }
   };
 

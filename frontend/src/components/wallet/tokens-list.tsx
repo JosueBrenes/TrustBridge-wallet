@@ -25,7 +25,7 @@ export function TokensList({ tokens, isLoading = false, onTokenClick }: TokensLi
   const formatBalance = (balance: string) => {
     const num = parseFloat(balance)
     if (isNaN(num)) return "0.00"
-    return num.toLocaleString('es-ES', { 
+    return num.toLocaleString('en-US', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 6 
     })
@@ -34,7 +34,7 @@ export function TokensList({ tokens, isLoading = false, onTokenClick }: TokensLi
   const formatValue = (value: string) => {
     const num = parseFloat(value)
     if (isNaN(num)) return "$0.00"
-    return `$${num.toLocaleString('es-ES', { 
+    return `$${num.toLocaleString('en-US', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
     })}`

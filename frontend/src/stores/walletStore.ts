@@ -5,6 +5,8 @@ import {
   getAccountBalance,
   fundTestnetAccount,
   sendPayment,
+  swapXLMToUSDC,
+  getMarketPrice,
 } from "@/lib/stellar";
 
 interface WalletState {
@@ -29,6 +31,8 @@ interface WalletActions {
   refreshBalance: () => Promise<void>;
   fundAccount: () => Promise<void>;
   sendMoney: (destinationPublicKey: string, amount: string, memo?: string) => Promise<{ success: boolean; transactionHash?: string; error?: string }>;
+  swapXLMToUSDC: (xlmAmount: string, minUSDCAmount: string) => Promise<{ success: boolean; transactionHash?: string; error?: string; receivedAmount?: string }>;
+  getMarketPrice: () => Promise<{ price: string; spread: string }>;
   startAutoRefresh: () => void;
   stopAutoRefresh: () => void;
   setError: (error: string | null) => void;
@@ -269,6 +273,49 @@ export const useWalletStore = create<WalletStore>((set, get) => ({
         success: false,
         error: errorMessage,
       };
+    }
+  },
+
+  swapXLMToUSDC: async (xlmAmount: string, minUSDCAmount: string) => {
+    const { secretKey } = get();
+
+    if (!secretKey) {
+      return {
+        success: false,
+        error: "No wallet connected. Please create or import a wallet first.",
+      };
+    }
+
+    try {
+      set({ isLoading: true, error: null });
+
+      const result = await swapXLMToUSDC(secretKey, xlmAmount, minUSDCAmount);
+
+      if (result.success) {
+        // Refresh balance after successful swap
+        setTimeout(() => {
+          get().refreshBalance();
+        }, 2000);
+      }
+
+      set({ isLoading: false });
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to perform swap';
+      set({ isLoading: false, error: errorMessage });
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  },
+
+  getMarketPrice: async () => {
+    try {
+      return await getMarketPrice();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get market price';
+      throw new Error(errorMessage);
     }
   },
 

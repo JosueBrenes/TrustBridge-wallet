@@ -11,6 +11,7 @@ import { ActionButtons } from "./action-buttons";
 import { TokensList } from "./tokens-list";
 import { ReceiveQRModal } from "./receive-qr-modal";
 import { SendModal } from "./send-modal";
+import { SwapModal } from "./swap-modal";
 import { WalletHeader } from "./wallet-header";
 import { WalletConnect } from "./wallet-connect";
 
@@ -33,6 +34,7 @@ export default function WalletSection() {
   const [viewMode, setViewMode] = useState<ViewMode>("connect");
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showSwapModal, setShowSwapModal] = useState(false);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -145,7 +147,7 @@ export default function WalletSection() {
       <ActionButtons
         onSend={() => setShowSendModal(true)}
         onReceive={() => setShowReceiveModal(true)}
-        onSwap={() => toast.info("Swap function coming soon")}
+        onSwap={() => setShowSwapModal(true)}
         onBuy={() => toast.info("Buy function coming soon")}
         disabled={isLoading}
       />
@@ -197,6 +199,12 @@ export default function WalletSection() {
       <SendModal
         isOpen={showSendModal}
         onClose={() => setShowSendModal(false)}
+      />
+
+      {/* Swap Modal */}
+      <SwapModal
+        isOpen={showSwapModal}
+        onClose={() => setShowSwapModal(false)}
       />
     </div>
   );
