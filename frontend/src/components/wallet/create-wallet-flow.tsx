@@ -198,14 +198,14 @@ export function CreateWalletFlow({
 
   if (currentStep === "password") {
     return (
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader className="text-center">
-          <CardTitle>Create a Password</CardTitle>
-          <p className="text-sm text-muted-foreground">
+      <Card className="w-full max-w-md sm:max-w-lg mx-auto">
+        <CardHeader className="text-center space-y-2 sm:space-y-3">
+          <CardTitle className="text-lg sm:text-xl">Create a Password</CardTitle>
+          <p className="text-sm sm:text-base text-muted-foreground px-2">
             This will be used to unlock your wallet
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
             <div className="flex items-start space-x-2">
               <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
@@ -281,12 +281,12 @@ export function CreateWalletFlow({
             </Label>
           </div>
 
-          <Button onClick={handlePasswordSubmit} className="w-full">
+          <Button onClick={handlePasswordSubmit} className="w-full h-11 sm:h-12 text-sm sm:text-base">
             Confirm
           </Button>
 
-          <Button variant="outline" onClick={onBack} className="w-full">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+          <Button variant="outline" onClick={onBack} className="w-full h-11 sm:h-12 text-sm sm:text-base">
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Back
           </Button>
         </CardContent>
@@ -296,15 +296,15 @@ export function CreateWalletFlow({
 
   if (currentStep === "recovery-phrase") {
     return (
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader className="text-center">
-          <CardTitle>Recovery Phrase</CardTitle>
-          <p className="text-sm text-muted-foreground">
+      <Card className="w-full max-w-md sm:max-w-lg mx-auto">
+        <CardHeader className="text-center space-y-2 sm:space-y-3">
+          <CardTitle className="text-lg sm:text-xl">Recovery Phrase</CardTitle>
+          <p className="text-sm sm:text-base text-muted-foreground px-2">
             Your recovery phrase is the key to your account and is the only way
             to recover it. Keep it safe.
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
           <div className="space-y-3">
             <p className="flex items-center space-x-2">
               <span className="w-2 h-2 bg-green-500 rounded-full"></span>

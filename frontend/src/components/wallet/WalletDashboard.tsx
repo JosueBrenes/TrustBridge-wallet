@@ -64,11 +64,11 @@ export default function WalletDashboard() {
   const totalValueUSD = (parseFloat(totalBalance) * 0.12).toFixed(2);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Error Display */}
       {error && (
         <Card className="border-destructive/20 bg-destructive/5">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <p className="text-sm text-destructive">{error}</p>
           </CardContent>
         </Card>
@@ -76,9 +76,9 @@ export default function WalletDashboard() {
 
       {/* Main Balance Card */}
       <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 p-4 sm:p-6">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-medium text-muted-foreground">
+            <CardTitle className="text-base sm:text-lg font-medium text-muted-foreground">
               Total Balance
             </CardTitle>
             <div className="flex items-center gap-2">
@@ -101,56 +101,56 @@ export default function WalletDashboard() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
           <div className="space-y-1">
             {showBalance ? (
               <>
-                <div className="text-3xl font-bold">
+                <div className="text-2xl sm:text-3xl font-bold">
                   {parseFloat(totalBalance).toFixed(4)} XLM
                 </div>
-                <div className="text-lg text-muted-foreground">
+                <div className="text-base sm:text-lg text-muted-foreground">
                   ≈ ${totalValueUSD} USD
                 </div>
               </>
             ) : (
               <>
-                <div className="text-3xl font-bold">••••••</div>
-                <div className="text-lg text-muted-foreground">••••••</div>
+                <div className="text-2xl sm:text-3xl font-bold">••••••</div>
+                <div className="text-base sm:text-lg text-muted-foreground">••••••</div>
               </>
             )}
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowSendModal(true)}
               disabled={isLoading}
-              className="flex flex-col gap-1 h-auto py-3"
+              className="flex flex-col gap-1 h-auto py-3 sm:py-4"
             >
-              <Send className="h-4 w-4" />
-              <span className="text-xs">Send</span>
+              <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-xs sm:text-sm">Send</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowReceiveModal(true)}
               disabled={isLoading}
-              className="flex flex-col gap-1 h-auto py-3"
+              className="flex flex-col gap-1 h-auto py-3 sm:py-4"
             >
-              <QrCode className="h-4 w-4" />
-              <span className="text-xs">Receive</span>
+              <QrCode className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-xs sm:text-sm">Receive</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowSwapModal(true)}
               disabled={isLoading}
-              className="flex flex-col gap-1 h-auto py-3"
+              className="flex flex-col gap-1 h-auto py-3 sm:py-4"
             >
-              <ArrowUpDown className="h-4 w-4" />
-              <span className="text-xs">Swap</span>
+              <ArrowUpDown className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-xs sm:text-sm">Swap</span>
             </Button>
           </div>
         </CardContent>
@@ -158,9 +158,9 @@ export default function WalletDashboard() {
 
       {/* Assets Section */}
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Assets</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Assets</CardTitle>
             <Badge variant="secondary" className="text-xs">
               {tokens.length} {tokens.length === 1 ? 'Asset' : 'Assets'}
             </Badge>
@@ -179,10 +179,10 @@ export default function WalletDashboard() {
 
       {/* Quick Actions Card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Quick Actions</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 p-4 sm:p-6 pt-0">
           <Button
             variant="outline"
             onClick={async () => {
