@@ -15,8 +15,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { TrendingUp, Zap } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { DefindexModal } from "./defindex-modal";
+import Image from "next/image";
 
 interface DeFiModalProps {
   isOpen: boolean;
@@ -57,7 +58,13 @@ export function DeFiModal({ isOpen, onClose }: DeFiModalProps) {
             >
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Zap className="h-5 w-5 text-blue-500" />
+                  <Image 
+                    src="/blend.png" 
+                    alt="Blend Protocol" 
+                    width={20} 
+                    height={20}
+                    className="rounded-sm"
+                  />
                   Blend Protocol
                 </CardTitle>
                 <CardDescription>
@@ -77,7 +84,13 @@ export function DeFiModal({ isOpen, onClose }: DeFiModalProps) {
             >
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <TrendingUp className="h-5 w-5 text-green-500" />
+                  <Image 
+                    src="/defindex.png" 
+                    alt="DeFindex" 
+                    width={20} 
+                    height={20}
+                    className="rounded-sm"
+                  />
                   DeFindex
                 </CardTitle>
                 <CardDescription>

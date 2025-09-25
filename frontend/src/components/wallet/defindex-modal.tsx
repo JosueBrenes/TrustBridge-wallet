@@ -23,6 +23,7 @@ import { TrendingUp, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DefindexService } from "@/services/defindex.service";
 import { useWalletStore } from "@/stores/walletStore";
+import Image from "next/image";
 
 interface DefindexModalProps {
   isOpen: boolean;
@@ -41,6 +42,17 @@ interface Strategy {
   vaultAddress: string;
 }
 
+interface PortfolioData {
+  totalDeposited: number;
+  totalWithdrawn: number;
+  lastKnownBalance: number;
+  transactions: Array<{
+    type: 'deposit' | 'withdraw';
+    amount: number;
+    timestamp: number;
+  }>;
+}
+
 export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
   const { publicKey } = useWalletStore();
   const [viewMode, setViewMode] = useState<ViewMode>("strategies");
@@ -54,12 +66,36 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // New state for portfolio tracking
-  const [totalDeposited, setTotalDeposited] = useState<string>("0");
-  const [portfolioHistory, setPortfolioHistory] = useState<{
-    deposits: number;
-    withdrawals: number;
-  }>({ deposits: 0, withdrawals: 0 });
+  // Updated portfolio tracking with proper persistence
+  const [portfolioData, setPortfolioData] = useState<PortfolioData>({
+    totalDeposited: 0,
+    totalWithdrawn: 0,
+    lastKnownBalance: 0,
+    transactions: []
+  });
+
+  // Load portfolio data from localStorage
+  const loadPortfolioData = () => {
+    if (!publicKey) return;
+    
+    const stored = localStorage.getItem(`defindex_portfolio_${publicKey}`);
+    if (stored) {
+      try {
+        const data = JSON.parse(stored);
+        setPortfolioData(data);
+      } catch (error) {
+        console.error('Error loading portfolio data:', error);
+      }
+    }
+  };
+
+  // Save portfolio data to localStorage
+  const savePortfolioData = (data: PortfolioData) => {
+    if (!publicKey) return;
+    
+    localStorage.setItem(`defindex_portfolio_${publicKey}`, JSON.stringify(data));
+    setPortfolioData(data);
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -88,10 +124,11 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
   };
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && publicKey) {
+      loadPortfolioData();
       loadData();
     }
-  }, [isOpen]);
+  }, [isOpen, publicKey]);
 
   const handleStrategySelect = (strategy: Strategy) => {
     setSelectedStrategy(strategy);
@@ -115,12 +152,20 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
         selectedStrategy.vaultAddress
       );
 
-      // Update portfolio tracking
-      setTotalDeposited((prev) => (parseFloat(prev) + amount).toString());
-      setPortfolioHistory((prev) => ({
-        ...prev,
-        deposits: prev.deposits + amount,
-      }));
+      // Update portfolio tracking with proper transaction history
+      const newTransaction = {
+        type: 'deposit' as const,
+        amount: amount,
+        timestamp: Date.now()
+      };
+
+      const updatedPortfolioData = {
+        ...portfolioData,
+        totalDeposited: portfolioData.totalDeposited + amount,
+        transactions: [...portfolioData.transactions, newTransaction]
+      };
+
+      savePortfolioData(updatedPortfolioData);
 
       toast.success(
         `Successfully invested ${amount} in ${selectedStrategy.name}`
@@ -156,11 +201,20 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
         vaultAddress
       );
 
-      // Update portfolio tracking
-      setPortfolioHistory((prev) => ({
-        ...prev,
-        withdrawals: prev.withdrawals + amount,
-      }));
+      // Update portfolio tracking with proper transaction history
+      const newTransaction = {
+        type: 'withdraw' as const,
+        amount: amount,
+        timestamp: Date.now()
+      };
+
+      const updatedPortfolioData = {
+        ...portfolioData,
+        totalWithdrawn: portfolioData.totalWithdrawn + amount,
+        transactions: [...portfolioData.transactions, newTransaction]
+      };
+
+      savePortfolioData(updatedPortfolioData);
 
       toast.success(`Successfully withdrew ${amount}`);
       setWithdrawAmount("");
@@ -263,7 +317,7 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
           <div className="flex justify-between">
             <span>Risk Level:</span>
             <Badge className={getRiskColor(selectedStrategy?.risk || "")}>
-              {selectedStrategy?.risk}
+              {selectedStrategy?.risk} Risk
             </Badge>
           </div>
         </CardContent>
@@ -272,7 +326,7 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
       <div className="space-y-4">
         <div>
           <Label className="mb-2" htmlFor="invest-amount">
-            Investment Amount (XLM)
+            Amount to Invest (XLM)
           </Label>
           <Input
             id="invest-amount"
@@ -303,18 +357,17 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
 
   const renderPortfolioView = () => {
     const currentBalance = parseFloat(userBalance);
-    const totalDeposits = portfolioHistory.deposits;
-    const totalWithdrawals = portfolioHistory.withdrawals;
-    const netDeposited = totalDeposits - totalWithdrawals;
-
-    // Si no hay historial de depósitos pero hay balance, asumir que el balance actual es el depósito inicial
-    const effectiveNetDeposited =
-      netDeposited > 0 ? netDeposited : currentBalance;
+    
+    // Calculate proper gains/losses based on tracked deposits and withdrawals
+    const netDeposited = portfolioData.totalDeposited - portfolioData.totalWithdrawn;
+    
+    // If we have no transaction history but have a balance, this might be an existing investment
+    // In this case, we'll treat the current balance as the initial deposit for calculation purposes
+    const effectiveNetDeposited = netDeposited > 0 ? netDeposited : 
+      (currentBalance > 0 && portfolioData.totalDeposited === 0 ? currentBalance : netDeposited);
+    
     const totalGains = currentBalance - effectiveNetDeposited;
-    const gainPercentage =
-      effectiveNetDeposited > 0
-        ? (totalGains / effectiveNetDeposited) * 100
-        : 0;
+    const gainPercentage = effectiveNetDeposited > 0 ? (totalGains / effectiveNetDeposited) * 100 : 0;
 
     return (
       <div className="space-y-4">
@@ -326,7 +379,7 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h3 className="text-lg font-semibold">Mi Portfolio</h3>
+          <h3 className="text-lg font-semibold">My Portfolio</h3>
         </div>
 
         {/* Portfolio Summary Cards */}
@@ -334,7 +387,7 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
           <Card>
             <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Balance Actual</p>
+                <p className="text-sm text-muted-foreground">Current Balance</p>
                 <p className="text-xl font-bold">
                   {currentBalance.toFixed(2)} XLM
                 </p>
@@ -346,7 +399,7 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
             <CardContent className="p-4">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">
-                  Total Depositado
+                  Net Deposited Total
                 </p>
                 <p className="text-xl font-bold">
                   {effectiveNetDeposited.toFixed(2)} XLM
@@ -362,7 +415,7 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Ganancias/Pérdidas
+                  Gains/Losses
                 </p>
                 <p
                   className={`text-lg font-bold ${
@@ -374,7 +427,7 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Rendimiento</p>
+                <p className="text-sm text-muted-foreground">Performance</p>
                 <p
                   className={`text-lg font-bold ${
                     gainPercentage >= 0 ? "text-green-600" : "text-red-600"
@@ -391,99 +444,140 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
         {/* Strategy Details */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Detalles de Estrategia</CardTitle>
+            <CardTitle className="text-base">Strategy Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between">
-              <span>APY Actual:</span>
+              <span>Current APY:</span>
               <span className="font-semibold text-green-600">
                 {(currentAPY || 0).toFixed(2)}%
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Total Depósitos:</span>
+              <span>Total Deposits:</span>
               <span className="font-semibold">
-                {totalDeposits.toFixed(2)} XLM
+                {portfolioData.totalDeposited.toFixed(2)} XLM
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Total Retiros:</span>
+              <span>Total Withdrawals:</span>
               <span className="font-semibold">
-                {totalWithdrawals.toFixed(2)} XLM
+                {portfolioData.totalWithdrawn.toFixed(2)} XLM
               </span>
             </div>
           </CardContent>
         </Card>
 
+        {/* Transaction History */}
+        {portfolioData.transactions.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Transaction History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {portfolioData.transactions.slice(-5).reverse().map((tx, index) => (
+                  <div key={index} className="flex justify-between items-center text-sm">
+                    <span className={tx.type === 'deposit' ? 'text-green-600' : 'text-red-600'}>
+                      {tx.type === 'deposit' ? '+' : '-'}{tx.amount.toFixed(2)} XLM
+                    </span>
+                    <span className="text-muted-foreground">
+                      {new Date(tx.timestamp).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+
+
         {/* Withdraw Section */}
         {currentBalance > 0 && (
           <div className="space-y-4">
-            <Separator />
-            <div>
-              <Label htmlFor="withdraw-amount">Cantidad a Retirar (XLM)</Label>
-              <Input
-                id="withdraw-amount"
-                type="number"
-                placeholder="Ingresa la cantidad a retirar"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                max={userBalance}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Disponible: {currentBalance.toFixed(2)} XLM
-              </p>
-            </div>
+            <Separator className="my-6" />
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+              <h4 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                💰 Withdraw Funds
+              </h4>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="withdraw-amount" className="text-blue-800 font-medium">
+                    Amount to Withdraw (XLM)
+                  </Label>
+                  <Input
+                    id="withdraw-amount"
+                    type="number"
+                    placeholder="Enter amount to withdraw"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    max={userBalance}
+                    className="mt-1 border-blue-200 focus:border-blue-400"
+                  />
+                  <p className="text-xs text-blue-600 mt-1">
+                    💎 Available: {currentBalance.toFixed(2)} XLM
+                  </p>
+                </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                onClick={() => setWithdrawAmount(userBalance)}
-                variant="outline"
-                size="sm"
-              >
-                Retirar Todo
-              </Button>
-              <Button
-                onClick={() =>
-                  setWithdrawAmount((currentBalance / 2).toFixed(2))
-                }
-                variant="outline"
-                size="sm"
-              >
-                Retirar 50%
-              </Button>
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={() => setWithdrawAmount(userBalance)}
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  >
+                    Withdraw All
+                  </Button>
+                  <Button
+                    onClick={() =>
+                      setWithdrawAmount((currentBalance / 2).toFixed(2))
+                    }
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  >
+                    Withdraw 50%
+                  </Button>
+                </div>
 
-            <Button
-              onClick={handleWithdraw}
-              disabled={isLoading || !withdrawAmount}
-              className="w-full"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Retirando...
-                </>
-              ) : (
-                "Retirar Fondos"
-              )}
-            </Button>
+                <Button
+                  onClick={handleWithdraw}
+                  disabled={isLoading || !withdrawAmount}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Withdrawing...
+                    </>
+                  ) : (
+                    "🚀 Withdraw Funds"
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Empty State */}
         {currentBalance === 0 && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                No tienes inversiones activas
+          <Card className="bg-gradient-to-br from-slate-50 to-gray-100 border-slate-200">
+            <CardContent className="p-8 text-center">
+              <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                <TrendingUp className="h-10 w-10 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-slate-800">
+                🌟 No Active Investments
               </h3>
-              <p className="text-muted-foreground mb-4">
-                Comienza invirtiendo en una de nuestras estrategias para ver tu
-                portfolio aquí.
+              <p className="text-slate-600 mb-6 max-w-md mx-auto">
+                Start investing in one of our DeFindex strategies to grow your portfolio intelligently.
               </p>
-              <Button onClick={() => setViewMode("strategies")}>
-                Ver Estrategias
+              <Button 
+                onClick={() => setViewMode("strategies")}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+              >
+                🚀 View Strategies
               </Button>
             </CardContent>
           </Card>
@@ -497,7 +591,13 @@ export function DefindexModal({ isOpen, onClose }: DefindexModalProps) {
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-500" />
+            <Image 
+              src="/defindex.png" 
+              alt="DeFindex" 
+              width={20} 
+              height={20}
+              className="rounded-sm"
+            />
             DeFindex Strategies
           </DialogTitle>
         </DialogHeader>
