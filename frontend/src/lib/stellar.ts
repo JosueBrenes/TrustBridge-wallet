@@ -213,7 +213,7 @@ export async function swapXLMToUSDC(
           .call();
         const operations = await transactionRecord.operations();
         const pathPaymentOp = operations.records.find(
-          (op: any) => op.type === "path_payment_strict_send"
+          (op: Horizon.HorizonApi.BaseOperationResponse) => op.type === "path_payment_strict_send"
         ) as Horizon.HorizonApi.PathPaymentStrictSendOperationResponse;
         if (pathPaymentOp) {
           receivedAmount = pathPaymentOp.amount;
