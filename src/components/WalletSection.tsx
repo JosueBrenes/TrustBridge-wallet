@@ -19,25 +19,22 @@ export default function WalletSection() {
   const {
     publicKey,
     secretKey,
-    balances,
+    balance,
     isLoading,
     error,
     isConnected,
     createWallet,
-    createWalletWithPassword,
     importWallet,
-    refreshBalances,
+    refreshBalance,
     fundAccount,
-    disconnectWallet,
-    isPasswordProtected,
-    hasRecoveryPhrase
+    disconnect
   } = useWallet();
 
   const [viewMode, setViewMode] = useState<ViewMode>('connect');
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('Copiado al portapapeles');
+    toast.success('Copied to clipboard');
   };
 
   const handleCreateWallet = () => {
@@ -45,7 +42,7 @@ export default function WalletSection() {
   };
 
   const handleWalletCreated = (publicKey: string, secretKey: string, password: string) => {
-    createWalletWithPassword(publicKey, secretKey, password);
+    createWallet();
     setViewMode('wallet');
   };
 
@@ -54,24 +51,22 @@ export default function WalletSection() {
   };
 
   const handleImportWallet = (secretKey: string) => {
-    const success = importWallet(secretKey);
-    if (success) {
-      setViewMode('wallet');
-    }
+    importWallet(secretKey);
+    setViewMode('wallet');
   };
 
-  // Preparar datos de tokens
-  const tokens = balances.map(balance => ({
-    symbol: balance.asset_type === 'native' ? 'XLM' : balance.asset_code || 'Unknown',
-    name: balance.asset_type === 'native' ? 'Stellar Lumens' : balance.asset_code || 'Unknown Asset',
-    balance: balance.balance,
-    value: balance.asset_type === 'native' ? (parseFloat(balance.balance) * 0.12).toFixed(2) : undefined,
-    change24h: balance.asset_type === 'native' ? 2.34 : undefined
+  // Prepare token data
+  const tokens = balance.map(balanceItem => ({
+    symbol: balanceItem.asset_type === 'native' ? 'XLM' : (balanceItem as any).asset_code || 'Unknown',
+    name: balanceItem.asset_type === 'native' ? 'Stellar Lumens' : (balanceItem as any).asset_code || 'Unknown Asset',
+    balance: balanceItem.balance,
+    value: balanceItem.asset_type === 'native' ? (parseFloat(balanceItem.balance) * 0.12).toFixed(2) : undefined,
+    change24h: balanceItem.asset_type === 'native' ? 2.34 : undefined
   }));
 
-  const totalBalance = balances.find(b => b.asset_type === 'native')?.balance || '0';
+  const totalBalance = balance.find(b => b.asset_type === 'native')?.balance || '0';
 
-  // Si no está conectado, mostrar pantalla de conexión o flujo de creación
+  // If not connected, show connection screen or creation flow
   if (!isConnected) {
     if (viewMode === 'create-flow') {
       return (
@@ -95,7 +90,7 @@ export default function WalletSection() {
     <div className="max-w-md mx-auto bg-background border rounded-xl shadow-lg overflow-hidden">
       {/* Header */}
       <WalletHeader
-        publicKey={publicKey}
+        publicKey={publicKey || undefined}
         isConnected={isConnected}
         onCopy={copyToClipboard}
       />
@@ -118,10 +113,10 @@ export default function WalletSection() {
 
       {/* Action Buttons */}
       <ActionButtons
-        onSend={() => toast.info('Función de envío próximamente')}
+        onSend={() => toast.info('Send function coming soon')}
         onReceive={() => copyToClipboard(publicKey || '')}
-        onSwap={() => toast.info('Función de intercambio próximamente')}
-        onBuy={() => toast.info('Función de compra próximamente')}
+        onSwap={() => toast.info('Swap function coming soon')}
+        onBuy={() => toast.info('Buy function coming soon')}
         disabled={isLoading}
       />
 
@@ -130,7 +125,7 @@ export default function WalletSection() {
         <TokensList
           tokens={tokens}
           isLoading={isLoading}
-          onTokenClick={(token) => toast.info(`Token seleccionado: ${token.symbol}`)}
+          onTokenClick={(token) => toast.info(`Token selected: ${token.symbol}`)}
         />
       </div>
 
@@ -140,40 +135,35 @@ export default function WalletSection() {
           <Button
             variant="outline"
             size="sm"
-            onClick={refreshBalances}
+            onClick={refreshBalance}
             disabled={isLoading}
             className="flex-1"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Actualizar
+            Refresh
           </Button>
           
           <Button
             variant="outline"
             size="sm"
             onClick={async () => {
-              const success = await fundAccount();
-              if (success) {
-                toast.success('Cuenta financiada exitosamente');
-              } else {
-                toast.error('Error al financiar la cuenta');
-              }
+              await fundAccount();
             }}
             disabled={isLoading}
             className="flex-1"
           >
             <Zap className="h-4 w-4 mr-2" />
-            Fondos Test
+            Test Funds
           </Button>
         </div>
 
         <Button
           variant="ghost"
           size="sm"
-          onClick={disconnectWallet}
+          onClick={disconnect}
           className="w-full text-muted-foreground hover:text-destructive"
         >
-          Desconectar Wallet
+          Disconnect Wallet
         </Button>
       </div>
     </div>

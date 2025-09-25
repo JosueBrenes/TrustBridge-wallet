@@ -1,56 +1,80 @@
-import { Keypair, Networks, rpc, TransactionBuilder, Operation, Asset, Horizon } from '@stellar/stellar-sdk';
+import { Keypair, Networks, rpc, Horizon } from '@stellar/stellar-sdk';
 
-// Configuración de red Stellar Testnet
+const { Server } = Horizon;
+
 export const STELLAR_CONFIG = {
   networkPassphrase: Networks.TESTNET,
   horizonUrl: 'https://horizon-testnet.stellar.org',
   sorobanRpcUrl: 'https://soroban-testnet.stellar.org',
 };
 
-// Inicializar servidor RPC de Soroban
+// Soroban RPC server instance
 export const server = new rpc.Server(STELLAR_CONFIG.sorobanRpcUrl);
 
-// Inicializar servidor Horizon para operaciones básicas
+// Horizon server instance
 export const horizonServer = new Horizon.Server(STELLAR_CONFIG.horizonUrl);
 
-// Función para generar un nuevo keypair (wallet)
+// Generate a new random wallet
 export function generateWallet() {
   const keypair = Keypair.random();
   return {
     publicKey: keypair.publicKey(),
     secretKey: keypair.secret(),
-    keypair: keypair
+    keypair
   };
 }
 
-// Función para crear cuenta desde secret key
+// Get keypair from secret key
 export function getKeypairFromSecret(secretKey: string) {
   return Keypair.fromSecret(secretKey);
 }
 
-// Función para obtener balance de cuenta
+// Get account balance from Stellar network
 export async function getAccountBalance(publicKey: string) {
   try {
     const account = await horizonServer.loadAccount(publicKey);
     
-    // Verificar que account y balances existan
-    if (!account || !account.balances) {
-      console.warn('Account or balances not found for:', publicKey);
+    if (!account.balances || account.balances.length === 0) {
       return [];
     }
     
-    const balances = account.balances.map(balance => ({
-      asset: balance.asset_type === 'native' ? 'XLM' : `${balance.asset_code}:${balance.asset_issuer}`,
-      balance: balance.balance,
-      asset_type: balance.asset_type
-    }));
+    const balances = account.balances.map(balance => {
+      if (balance.asset_type === 'native') {
+        return {
+          asset: 'XLM',
+          balance: balance.balance,
+          asset_type: balance.asset_type
+        };
+      } else if (balance.asset_type === 'credit_alphanum4' || balance.asset_type === 'credit_alphanum12') {
+        return {
+          asset: `${balance.asset_code}:${balance.asset_issuer}`,
+          balance: balance.balance,
+          asset_type: balance.asset_type
+        };
+      } else {
+        // For liquidity pools or other asset types
+        return {
+          asset: 'Unknown Asset',
+          balance: balance.balance,
+          asset_type: balance.asset_type
+        };
+      }
+    });
+    
     return balances;
   } catch (error: any) {
-    console.error('Error obteniendo balance:', error);
+    // If account doesn't exist, return empty array
+    if (error?.response?.status === 404 || 
+        error?.name === 'NotFoundError' || 
+        error?.message?.includes('not found') ||
+        error?.message?.includes('Account not found')) {
+      return [];
+    }
     
-    // Si la cuenta no existe, retornar array vacío en lugar de error
-    if (error.name === 'NotFoundError' || (error.message && error.message.includes('not found'))) {
-      console.warn('Account not found, returning empty balances');
+    // For network errors, also return empty array
+    if (error?.message?.includes('Network Error') || 
+        error?.message?.includes('CORS') ||
+        error?.name === 'NetworkError') {
       return [];
     }
     
@@ -58,44 +82,88 @@ export async function getAccountBalance(publicKey: string) {
   }
 }
 
-// Función para financiar cuenta en testnet (usando Friendbot)
-// Función para financiar cuenta en testnet usando Friendbot
+// Fund testnet account using Stellar Friendbot
 export async function fundTestnetAccount(publicKey: string): Promise<boolean> {
   try {
-    console.log(`🚀 Financiando cuenta: ${publicKey}`);
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
     
-    // Usar Friendbot de Stellar para financiar la cuenta
-    const friendbotUrl = `https://friendbot.stellar.org?addr=${publicKey}`;
-    console.log(`📡 Llamando a Friendbot: ${friendbotUrl}`);
+    // Encode public key for URL
+    const encodedPublicKey = encodeURIComponent(publicKey);
+    const friendbotUrl = `https://friendbot.stellar.org?addr=${encodedPublicKey}`;
     
-    const response = await fetch(friendbotUrl);
-    console.log(`📊 Respuesta de Friendbot - Status: ${response.status}, OK: ${response.ok}`);
-
+    const response = await fetch(friendbotUrl, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'TrustBridge-Demo/1.0'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
     if (response.ok) {
-      const responseText = await response.text();
-      console.log('✅ Cuenta financiada exitosamente:', responseText);
+      const responseData = await response.json();
       return true;
-    } else {
+    } else if (response.status === 400) {
       const errorText = await response.text();
-      console.error('❌ Friendbot funding failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorText: errorText
-      });
       
-      // Si la cuenta ya existe, considerarlo como éxito
-      if (response.status === 400 && errorText.includes('op_already_exists')) {
-        console.log('ℹ️ La cuenta ya existe, considerando como éxito');
+      // If account already exists or is already funded, consider it success
+      if (errorText.includes('op_already_exists') || 
+          errorText.includes('already exists') || 
+          errorText.includes('already funded') ||
+          errorText.includes('account already funded to starting balance')) {
         return true;
       }
       
       return false;
+    } else {
+      const errorText = await response.text();
+      return false;
+    }
+  } catch (error: any) {
+    // If timeout or network error, try alternative method
+    if (error.name === 'AbortError' || error.message?.includes('fetch')) {
+      return await fundAccountAlternative(publicKey);
+    }
+    
+    return false;
+  }
+}
+
+// Alternative method to fund account
+async function fundAccountAlternative(publicKey: string): Promise<boolean> {
+  try {
+    // First check if account already exists
+    const server = new Server(STELLAR_CONFIG.horizonUrl);
+    
+    try {
+      const account = await server.loadAccount(publicKey);
+      return true;
+    } catch (accountError: any) {
+      if (accountError.response?.status === 404) {
+        // Try alternative Friendbot endpoint
+        const alternativeUrl = `https://horizon-testnet.stellar.org/friendbot?addr=${encodeURIComponent(publicKey)}`;
+        
+        const response = await fetch(alternativeUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          return true;
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
     }
   } catch (error) {
-    console.error('❌ Error en Friendbot:', {
-      message: error instanceof Error ? error.message : 'Error desconocido',
-      error: error
-    });
     return false;
   }
 }

@@ -1,256 +1,206 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { generateWallet, getKeypairFromSecret, getAccountBalance, fundTestnetAccount } from '@/lib/stellar';
-import { Keypair } from '@stellar/stellar-sdk';
 
 interface WalletState {
   publicKey: string | null;
   secretKey: string | null;
-  keypair: Keypair | null;
-  balances: Array<{
+  isConnected: boolean;
+  balance: Array<{
     asset: string;
     balance: string;
     asset_type: string;
   }>;
   isLoading: boolean;
   error: string | null;
-  isPasswordProtected: boolean;
-  hasRecoveryPhrase: boolean;
 }
 
 export function useWallet() {
   const [wallet, setWallet] = useState<WalletState>({
     publicKey: null,
     secretKey: null,
-    keypair: null,
-    balances: [],
+    isConnected: false,
+    balance: [],
     isLoading: false,
     error: null,
-    isPasswordProtected: false,
-    hasRecoveryPhrase: false
   });
 
-  // Generar nueva wallet con contraseña y recovery phrase
-  const createWalletWithPassword = (publicKey: string, secretKey: string, password: string) => {
-    try {
-      const keypair = getKeypairFromSecret(secretKey);
-      
-      // Encriptar y guardar datos de la wallet
-      const walletData = {
-        publicKey,
-        secretKey,
-        password: btoa(password), // Codificación básica (en producción usar encriptación real)
-        timestamp: Date.now()
-      };
-      
-      setWallet(prev => ({
-        ...prev,
-        publicKey,
-        secretKey,
-        keypair,
-        error: null,
-        isPasswordProtected: true,
-        hasRecoveryPhrase: true
-      }));
-      
-      // Guardar en localStorage
-      localStorage.setItem('demo_wallet_data', JSON.stringify(walletData));
-      
-      return { publicKey, secretKey, keypair };
-    } catch (error) {
-      setWallet(prev => ({
-        ...prev,
-        error: 'Error creando wallet: ' + (error as Error).message
-      }));
-      return null;
-    }
-  };
-
-  // Generar nueva wallet (método original para compatibilidad)
-  const createWallet = () => {
-    try {
-      const newWallet = generateWallet();
-      setWallet(prev => ({
-        ...prev,
-        publicKey: newWallet.publicKey,
-        secretKey: newWallet.secretKey,
-        keypair: newWallet.keypair,
-        error: null,
-        isPasswordProtected: false,
-        hasRecoveryPhrase: false
-      }));
-      
-      // Guardar en localStorage para persistencia
-      localStorage.setItem('demo_wallet_secret', newWallet.secretKey);
-      
-      return newWallet;
-    } catch (error) {
-      setWallet(prev => ({
-        ...prev,
-        error: 'Error generando wallet: ' + (error as Error).message
-      }));
-      return null;
-    }
-  };
-
-  // Importar wallet desde secret key
-  const importWallet = (secretKey: string) => {
-    try {
-      const keypair = getKeypairFromSecret(secretKey);
-      setWallet(prev => ({
-        ...prev,
-        publicKey: keypair.publicKey(),
-        secretKey: secretKey,
-        keypair: keypair,
-        error: null
-      }));
-      
-      // Guardar en localStorage
-      localStorage.setItem('demo_wallet_secret', secretKey);
-      
-      return true;
-    } catch (error) {
-      setWallet(prev => ({
-        ...prev,
-        error: 'Secret key inválido: ' + (error as Error).message
-      }));
-      return false;
-    }
-  };
-
-  // Actualizar balances
-  const refreshBalances = async () => {
-    if (!wallet.publicKey) return;
-    
-    setWallet(prev => ({ ...prev, isLoading: true, error: null }));
-    
-    try {
-      console.log('🔄 Obteniendo balances para:', wallet.publicKey);
-      const balances = await getAccountBalance(wallet.publicKey);
-      
-      if (balances.length === 0) {
-        console.log('ℹ️ No se encontraron balances - la cuenta puede no estar financiada aún');
-      } else {
-        console.log('✅ Balances obtenidos:', balances);
-      }
-      
-      setWallet(prev => ({
-        ...prev,
-        balances,
-        isLoading: false,
-        error: null
-      }));
-    } catch (error) {
-      console.error('❌ Error obteniendo balances:', error);
-      setWallet(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Error obteniendo balances: ' + (error as Error).message
-      }));
-    }
-  };
-
-  // Financiar cuenta en testnet
-  const fundAccount = async () => {
-    if (!wallet.publicKey) return false;
-    
-    setWallet(prev => ({ ...prev, isLoading: true, error: null }));
-    
-    try {
-      console.log('Intentando financiar cuenta:', wallet.publicKey);
-      const success = await fundTestnetAccount(wallet.publicKey);
-      
-      if (success) {
-        console.log('Cuenta financiada exitosamente');
-        // Esperar un poco más para que la transacción se propague
-        setTimeout(() => {
-          console.log('Actualizando balances después del fondeo...');
-          refreshBalances();
-        }, 3000);
-      } else {
-        console.error('Error al financiar la cuenta');
-      }
-      
-      setWallet(prev => ({
-        ...prev,
-        isLoading: false,
-        error: success ? null : 'Error financiando cuenta'
-      }));
-      
-      return success;
-    } catch (error) {
-      console.error('Error en fundAccount:', error);
-      setWallet(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Error financiando cuenta: ' + (error as Error).message
-      }));
-      return false;
-    }
-  };
-
-  // Desconectar wallet
-  const disconnectWallet = () => {
-    setWallet({
-      publicKey: null,
-      secretKey: null,
-      keypair: null,
-      balances: [],
-      isLoading: false,
-      error: null,
-      isPasswordProtected: false,
-      hasRecoveryPhrase: false
-    });
-    localStorage.removeItem('demo_wallet_secret');
-    localStorage.removeItem('demo_wallet_data');
-  };
-
-  // Cargar wallet desde localStorage al inicializar
+  // Load wallet from localStorage on mount
   useEffect(() => {
-    // Primero intentar cargar wallet con contraseña
-    const savedWalletData = localStorage.getItem('demo_wallet_data');
-    if (savedWalletData) {
+    const savedWallet = localStorage.getItem('stellar-wallet');
+    if (savedWallet) {
       try {
-        const walletData = JSON.parse(savedWalletData);
-        const keypair = getKeypairFromSecret(walletData.secretKey);
+        const parsed = JSON.parse(savedWallet);
         setWallet(prev => ({
           ...prev,
-          publicKey: walletData.publicKey,
-          secretKey: walletData.secretKey,
-          keypair,
-          isPasswordProtected: true,
-          hasRecoveryPhrase: true
+          publicKey: parsed.publicKey,
+          secretKey: parsed.secretKey,
+          isConnected: true,
         }));
-        return;
       } catch (error) {
-        console.error('Error cargando wallet con contraseña:', error);
-        localStorage.removeItem('demo_wallet_data');
+        localStorage.removeItem('stellar-wallet');
       }
-    }
-
-    // Fallback: cargar wallet simple
-    const savedSecret = localStorage.getItem('demo_wallet_secret');
-    if (savedSecret) {
-      importWallet(savedSecret);
     }
   }, []);
 
-  // Actualizar balances cuando se conecta la wallet
-  useEffect(() => {
-    if (wallet.publicKey) {
-      // Solo intentar obtener balances si la wallet está conectada
-      // No importa si la cuenta existe o no, getAccountBalance maneja esto
-      refreshBalances();
+  // Create new wallet
+  const createWallet = useCallback(() => {
+    try {
+      setWallet(prev => ({ ...prev, isLoading: true, error: null }));
+      
+      const newWallet = generateWallet();
+      
+      const walletData = {
+        publicKey: newWallet.publicKey,
+        secretKey: newWallet.secretKey,
+        isConnected: true,
+        balance: [],
+        isLoading: false,
+        error: null,
+      };
+      
+      setWallet(walletData);
+      
+      // Save to localStorage
+      localStorage.setItem('stellar-wallet', JSON.stringify({
+        publicKey: newWallet.publicKey,
+        secretKey: newWallet.secretKey,
+      }));
+      
+    } catch (error) {
+      setWallet(prev => ({
+        ...prev,
+        isLoading: false,
+        error: 'Failed to create wallet. Please try again.',
+      }));
+    }
+  }, []);
+
+  // Import wallet from secret key
+  const importWallet = useCallback((secretKey: string) => {
+    try {
+      setWallet(prev => ({ ...prev, isLoading: true, error: null }));
+      
+      const keypair = getKeypairFromSecret(secretKey);
+      const publicKey = keypair.publicKey();
+      
+      const walletData = {
+        publicKey,
+        secretKey,
+        isConnected: true,
+        balance: [],
+        isLoading: false,
+        error: null,
+      };
+      
+      setWallet(walletData);
+      
+      // Save to localStorage
+      localStorage.setItem('stellar-wallet', JSON.stringify({
+        publicKey,
+        secretKey,
+      }));
+      
+    } catch (error) {
+      setWallet(prev => ({
+        ...prev,
+        isLoading: false,
+        error: 'Invalid secret key. Please check and try again.',
+      }));
+    }
+  }, []);
+
+  // Disconnect wallet
+  const disconnect = useCallback(() => {
+    setWallet({
+      publicKey: null,
+      secretKey: null,
+      isConnected: false,
+      balance: [],
+      isLoading: false,
+      error: null,
+    });
+    localStorage.removeItem('stellar-wallet');
+  }, []);
+
+  // Refresh balance
+  const refreshBalance = useCallback(async () => {
+    if (!wallet.publicKey) return;
+    
+    try {
+      setWallet(prev => ({ ...prev, isLoading: true, error: null }));
+      
+      const balance = await getAccountBalance(wallet.publicKey);
+      
+      setWallet(prev => ({
+        ...prev,
+        balance,
+        isLoading: false,
+        error: null,
+      }));
+    } catch (error) {
+      setWallet(prev => ({
+        ...prev,
+        isLoading: false,
+        error: 'Failed to fetch balance. Please try again.',
+      }));
     }
   }, [wallet.publicKey]);
+
+  // Fund account with Friendbot
+  const fundAccount = useCallback(async () => {
+    if (!wallet.publicKey) {
+      setWallet(prev => ({
+        ...prev,
+        error: 'No wallet connected. Please create or import a wallet first.',
+      }));
+      return;
+    }
+
+    try {
+      setWallet(prev => ({ ...prev, isLoading: true, error: null }));
+
+      const success = await fundTestnetAccount(wallet.publicKey);
+
+      if (success) {
+        setWallet(prev => ({
+          ...prev,
+          isLoading: false,
+          error: null,
+        }));
+
+        // Refresh balance after a short delay to allow network propagation
+        setTimeout(() => {
+          refreshBalance();
+        }, 2000);
+      } else {
+        setWallet(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'Account funding failed. The account may already be funded or there was a network error.',
+        }));
+      }
+    } catch (error) {
+      setWallet(prev => ({
+        ...prev,
+        isLoading: false,
+        error: 'Unexpected error during funding. Please try again.',
+      }));
+    }
+  }, [wallet.publicKey, refreshBalance]);
+
+  // Auto-refresh balance when wallet is connected
+  useEffect(() => {
+    if (wallet.isConnected && wallet.publicKey) {
+      refreshBalance();
+    }
+  }, [wallet.isConnected, wallet.publicKey, refreshBalance]);
 
   return {
     ...wallet,
     createWallet,
-    createWalletWithPassword,
     importWallet,
-    refreshBalances,
+    disconnect,
+    refreshBalance,
     fundAccount,
-    disconnectWallet,
-    isConnected: !!wallet.publicKey
   };
 }

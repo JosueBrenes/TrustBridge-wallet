@@ -86,7 +86,7 @@ export function TokensList({ tokens, isLoading = false, onTokenClick }: TokensLi
               </div>
               <h3 className="text-lg font-medium mb-2">No tokens found</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Your wallet doesn't have any tokens yet
+                Your wallet doesn&apos;t have any tokens yet
               </p>
               <Button variant="outline" size="sm">
                 <Plus className="h-4 w-4 mr-2" />

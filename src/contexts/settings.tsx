@@ -1,17 +1,20 @@
 import React, { useContext } from 'react';
-import { Network } from '@blend-capital/blend-sdk';
-import { BLEND_CONFIG } from '../lib/blend';
+import { Networks } from '@stellar/stellar-sdk';
 
 export interface ISettingsContext {
-  network: Network;
+  network: {
+    rpc: string;
+    passphrase: string;
+    opts: { allowHttp: boolean };
+  };
 }
 
 const SettingsContext = React.createContext<ISettingsContext | undefined>(undefined);
 
 export const SettingsProvider = ({ children = null as any }) => {
-  const network: Network = {
-    rpc: BLEND_CONFIG.sorobanRpcUrl,
-    passphrase: BLEND_CONFIG.networkPassphrase,
+  const network = {
+    rpc: 'https://soroban-testnet.stellar.org',
+    passphrase: Networks.TESTNET,
     opts: { allowHttp: false }
   };
 

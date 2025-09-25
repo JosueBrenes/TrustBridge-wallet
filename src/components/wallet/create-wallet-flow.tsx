@@ -151,7 +151,6 @@ export function CreateWalletFlow({ onWalletCreated, onBack }: CreateWalletFlowPr
         }
       }
     } catch (err) {
-      console.error('Clipboard error:', err);
       toast.error('Failed to copy to clipboard. Please copy manually.');
     }
   };

@@ -11,7 +11,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Demo TrustBridge - Stellar Wallet",
-  description: "Wallet minimalista para Stellar con integración Blend Protocol",
+  description: "Wallet minimalista para Stellar",
 };
 
 export default function RootLayout({
