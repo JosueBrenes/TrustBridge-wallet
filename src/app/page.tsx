@@ -1,4 +1,4 @@
-import WalletSection from '@/components/WalletSection';
+import WalletSection from "@/components/wallet/WalletSection";
 
 export default function Home() {
   return (

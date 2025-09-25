@@ -7,9 +7,9 @@ export interface IWalletContext {
 
 const WalletContext = React.createContext<IWalletContext | undefined>(undefined);
 
-export const WalletProvider = ({ children = null as any }) => {
-  const [connected, setConnected] = useState<boolean>(false);
-  const [walletAddress, setWalletAddress] = useState<string>('');
+export const WalletProvider = ({ children = null }: { children?: React.ReactNode }) => {
+  const [connected] = useState<boolean>(false);
+  const [walletAddress] = useState<string>('');
 
   return (
     <WalletContext.Provider

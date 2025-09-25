@@ -11,7 +11,7 @@ export interface ISettingsContext {
 
 const SettingsContext = React.createContext<ISettingsContext | undefined>(undefined);
 
-export const SettingsProvider = ({ children = null as any }) => {
+export const SettingsProvider = ({ children = null }: { children?: React.ReactNode }) => {
   const network = {
     rpc: 'https://soroban-testnet.stellar.org',
     passphrase: Networks.TESTNET,

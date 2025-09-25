@@ -1,11 +1,11 @@
-import { Keypair, Networks, rpc, Horizon } from '@stellar/stellar-sdk';
+import { Keypair, Networks, rpc, Horizon } from "@stellar/stellar-sdk";
 
 const { Server } = Horizon;
 
 export const STELLAR_CONFIG = {
   networkPassphrase: Networks.TESTNET,
-  horizonUrl: 'https://horizon-testnet.stellar.org',
-  sorobanRpcUrl: 'https://soroban-testnet.stellar.org',
+  horizonUrl: "https://horizon-testnet.stellar.org",
+  sorobanRpcUrl: "https://soroban-testnet.stellar.org",
 };
 
 // Soroban RPC server instance
@@ -20,7 +20,7 @@ export function generateWallet() {
   return {
     publicKey: keypair.publicKey(),
     secretKey: keypair.secret(),
-    keypair
+    keypair,
   };
 }
 
@@ -33,52 +33,50 @@ export function getKeypairFromSecret(secretKey: string) {
 export async function getAccountBalance(publicKey: string) {
   try {
     const account = await horizonServer.loadAccount(publicKey);
-    
+
     if (!account.balances || account.balances.length === 0) {
       return [];
     }
-    
-    const balances = account.balances.map(balance => {
-      if (balance.asset_type === 'native') {
+
+    const balances = account.balances.map((balance) => {
+      if (balance.asset_type === "native") {
         return {
-          asset: 'XLM',
+          asset: "XLM",
           balance: balance.balance,
-          asset_type: balance.asset_type
+          asset_type: balance.asset_type,
         };
-      } else if (balance.asset_type === 'credit_alphanum4' || balance.asset_type === 'credit_alphanum12') {
+      } else if (
+        balance.asset_type === "credit_alphanum4" ||
+        balance.asset_type === "credit_alphanum12"
+      ) {
         return {
           asset: `${balance.asset_code}:${balance.asset_issuer}`,
           balance: balance.balance,
-          asset_type: balance.asset_type
+          asset_type: balance.asset_type,
         };
       } else {
         // For liquidity pools or other asset types
         return {
-          asset: 'Unknown Asset',
+          asset: "Unknown Asset",
           balance: balance.balance,
-          asset_type: balance.asset_type
+          asset_type: balance.asset_type,
         };
       }
     });
-    
+
     return balances;
-  } catch (error: any) {
-    // If account doesn't exist, return empty array
-    if (error?.response?.status === 404 || 
-        error?.name === 'NotFoundError' || 
-        error?.message?.includes('not found') ||
-        error?.message?.includes('Account not found')) {
-      return [];
+  } catch (error: unknown) {
+    console.error("Error getting account balance:", error);
+
+    // Check if it's a 404 error (account not found)
+    if (error && typeof error === "object" && "response" in error) {
+      const response = (error as { response: { status: number } }).response;
+      if (response.status === 404) {
+        return [];
+      }
     }
-    
-    // For network errors, also return empty array
-    if (error?.message?.includes('Network Error') || 
-        error?.message?.includes('CORS') ||
-        error?.name === 'NetworkError') {
-      return [];
-    }
-    
-    return [];
+
+    throw error;
   }
 }
 
@@ -88,47 +86,58 @@ export async function fundTestnetAccount(publicKey: string): Promise<boolean> {
     // Create AbortController for timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
-    
+
     // Encode public key for URL
     const encodedPublicKey = encodeURIComponent(publicKey);
     const friendbotUrl = `https://friendbot.stellar.org?addr=${encodedPublicKey}`;
-    
+
     const response = await fetch(friendbotUrl, {
-      method: 'GET',
+      method: "GET",
       signal: controller.signal,
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'TrustBridge-Demo/1.0'
-      }
+        Accept: "application/json",
+        "User-Agent": "TrustBridge-Demo/1.0",
+      },
     });
-    
+
     clearTimeout(timeoutId);
-    
+
     if (response.ok) {
-      const responseData = await response.json();
       return true;
     } else if (response.status === 400) {
-      const errorText = await response.text();
-      
+      const _errorText = await response.text();
+
       // If account already exists or is already funded, consider it success
-      if (errorText.includes('op_already_exists') || 
-          errorText.includes('already exists') || 
-          errorText.includes('already funded') ||
-          errorText.includes('account already funded to starting balance')) {
+      if (
+        _errorText.includes("op_already_exists") ||
+        _errorText.includes("already exists") ||
+        _errorText.includes("already funded") ||
+        _errorText.includes("account already funded to starting balance")
+      ) {
         return true;
       }
-      
+
       return false;
     } else {
-      const errorText = await response.text();
+      await response.text();
       return false;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If timeout or network error, try alternative method
-    if (error.name === 'AbortError' || error.message?.includes('fetch')) {
-      return await fundAccountAlternative(publicKey);
+    if (
+      error &&
+      typeof error === "object" &&
+      ("name" in error || "message" in error)
+    ) {
+      const errorObj = error as { name?: string; message?: string };
+      if (
+        errorObj.name === "AbortError" ||
+        errorObj.message?.includes("fetch")
+      ) {
+        return await fundAccountAlternative(publicKey);
+      }
     }
-    
+
     return false;
   }
 }
@@ -138,24 +147,56 @@ async function fundAccountAlternative(publicKey: string): Promise<boolean> {
   try {
     // First check if account already exists
     const server = new Server(STELLAR_CONFIG.horizonUrl);
-    
+
     try {
-      const account = await server.loadAccount(publicKey);
+      await server.loadAccount(publicKey);
       return true;
-    } catch (accountError: any) {
-      if (accountError.response?.status === 404) {
-        // Try alternative Friendbot endpoint
-        const alternativeUrl = `https://horizon-testnet.stellar.org/friendbot?addr=${encodeURIComponent(publicKey)}`;
-        
-        const response = await fetch(alternativeUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
+    } catch (accountError: unknown) {
+      if (
+        accountError &&
+        typeof accountError === "object" &&
+        "response" in accountError
+      ) {
+        const errorObj = accountError as { response: { status: number } };
+        if (errorObj.response?.status === 404) {
+          // Try alternative Friendbot endpoint
+          const alternativeUrl = `https://horizon-testnet.stellar.org/friendbot?addr=${encodeURIComponent(
+            publicKey
+          )}`;
+
+          try {
+            const response = await fetch(alternativeUrl, {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+              },
+            });
+
+            if (response.ok) {
+              return true;
+            } else {
+              return false;
+            }
+          } catch (error: unknown) {
+            console.error("Error funding account:", error);
+
+            // Check if it's a 400 error (account already exists)
+            if (error && typeof error === "object" && "response" in error) {
+              const response = (
+                error as {
+                  response: { status: number; data?: { detail?: string } };
+                }
+              ).response;
+              if (
+                response.status === 400 &&
+                response.data?.detail?.includes("createAccountAlreadyExist")
+              ) {
+                return true; // Account already funded
+              }
+            }
+
+            return false;
           }
-        });
-        
-        if (response.ok) {
-          return true;
         } else {
           return false;
         }
@@ -163,7 +204,8 @@ async function fundAccountAlternative(publicKey: string): Promise<boolean> {
         return false;
       }
     }
-  } catch (error) {
+  } catch {
+    console.error("Error in alternative funding method");
     return false;
   }
 }

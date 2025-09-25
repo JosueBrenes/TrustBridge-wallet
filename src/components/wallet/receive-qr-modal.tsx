@@ -29,7 +29,7 @@ export function ReceiveQRModal({ isOpen, onClose, publicKey }: ReceiveQRModalPro
       setCopied(true);
       toast.success('¡Dirección copiada al portapapeles!');
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       toast.error('Error al copiar la dirección');
     }
   };
@@ -42,7 +42,7 @@ export function ReceiveQRModal({ isOpen, onClose, publicKey }: ReceiveQRModalPro
           text: `Envíame XLM a esta dirección: ${publicKey}`,
           url: `stellar:${publicKey}`,
         });
-      } catch (error) {
+      } catch {
         // Si falla el share nativo, copiamos al portapapeles
         copyToClipboard();
       }
@@ -76,10 +76,7 @@ export function ReceiveQRModal({ isOpen, onClose, publicKey }: ReceiveQRModalPro
     }
   };
 
-  const formatAddress = (address: string) => {
-    if (address.length <= 12) return address;
-    return `${address.slice(0, 6)}...${address.slice(-6)}`;
-  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

@@ -1,27 +1,23 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Zap } from 'lucide-react';
-import { toast } from 'sonner';
-import { useWalletStore } from '@/stores/walletStore';
-import { CreateWalletFlow } from './wallet/create-wallet-flow';
-import { BalanceDisplay } from './wallet/balance-display';
-import { ActionButtons } from './wallet/action-buttons';
-import { TokensList } from './wallet/tokens-list';
-import { ReceiveQRModal } from './wallet/receive-qr-modal';
-import { WalletHeader } from './wallet/wallet-header';
-import { WalletConnect } from './wallet/wallet-connect';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Zap } from "lucide-react";
+import { toast } from "sonner";
+import { useWalletStore } from "@/stores/walletStore";
+import { CreateWalletFlow } from "./create-wallet-flow";
+import { BalanceDisplay } from "./balance-display";
+import { ActionButtons } from "./action-buttons";
+import { TokensList } from "./tokens-list";
+import { ReceiveQRModal } from "./receive-qr-modal";
+import { WalletHeader } from "./wallet-header";
+import { WalletConnect } from "./wallet-connect";
 
-type ViewMode = 'connect' | 'create-flow' | 'wallet';
+type ViewMode = "connect" | "create-flow" | "wallet";
 
 export default function WalletSection() {
   const {
     publicKey,
-    secretKey,
     balance,
     isLoading,
     error,
@@ -29,59 +25,69 @@ export default function WalletSection() {
     createWallet,
     importWallet,
     fundAccount,
-    disconnect
+    disconnect,
   } = useWalletStore();
 
-  const [viewMode, setViewMode] = useState<ViewMode>('connect');
+  const [viewMode, setViewMode] = useState<ViewMode>("connect");
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('Copied to clipboard');
+    toast.success("Copied to clipboard");
   };
 
   const handleCreateWallet = () => {
-    setViewMode('create-flow');
+    setViewMode("create-flow");
   };
 
-  const handleWalletCreated = (publicKey: string, secretKey: string, password: string) => {
+  const handleWalletCreated = () => {
     createWallet();
-    setViewMode('wallet');
+    setViewMode("wallet");
   };
 
   const handleBackToConnect = () => {
-    setViewMode('connect');
+    setViewMode("connect");
   };
 
   const handleImportWallet = (secretKey: string) => {
     importWallet(secretKey);
-    setViewMode('wallet');
+    setViewMode("wallet");
   };
 
   // Prepare token data
-  const tokens = balance.map(balanceItem => ({
-    symbol: balanceItem.asset_type === 'native' ? 'XLM' : (balanceItem as any).asset_code || 'Unknown',
-    name: balanceItem.asset_type === 'native' ? 'Stellar Lumens' : (balanceItem as any).asset_code || 'Unknown Asset',
+  const tokens = balance.map((balanceItem) => ({
+    symbol:
+      balanceItem.asset_type === "native"
+        ? "XLM"
+        : (balanceItem as { asset_code?: string }).asset_code || "Unknown",
+    name:
+      balanceItem.asset_type === "native"
+        ? "Stellar Lumens"
+        : (balanceItem as { asset_code?: string }).asset_code || "Unknown Asset",
     balance: balanceItem.balance,
-    value: balanceItem.asset_type === 'native' ? (parseFloat(balanceItem.balance) * 0.12).toFixed(2) : undefined,
-    change24h: balanceItem.asset_type === 'native' ? 2.34 : undefined
+    value:
+      balanceItem.asset_type === "native"
+        ? (parseFloat(balanceItem.balance) * 0.12).toFixed(2)
+        : undefined,
+    change24h: balanceItem.asset_type === "native" ? 2.34 : undefined,
   }));
 
-  const totalBalance = balance.find(b => b.asset_type === 'native')?.balance || '0';
+  const totalBalance =
+    balance.find((b) => b.asset_type === "native")?.balance || "0";
 
   // If not connected, show connection screen or creation flow
   if (!isConnected) {
-    if (viewMode === 'create-flow') {
+    if (viewMode === "create-flow") {
       return (
-        <CreateWalletFlow 
+        <CreateWalletFlow
           onWalletCreated={handleWalletCreated}
           onBack={handleBackToConnect}
         />
       );
     }
-    
+
     return (
-      <WalletConnect 
+      <WalletConnect
         onCreateWallet={handleCreateWallet}
         onImportWallet={handleImportWallet}
         isLoading={isLoading}
@@ -93,8 +99,7 @@ export default function WalletSection() {
     <div className="max-w-md mx-auto bg-background border rounded-xl shadow-lg overflow-hidden">
       {/* Header */}
       <WalletHeader
-        publicKey={publicKey || undefined}
-        isConnected={isConnected}
+        publicKey={publicKey}
         onCopy={copyToClipboard}
       />
 
@@ -116,10 +121,10 @@ export default function WalletSection() {
 
       {/* Action Buttons */}
       <ActionButtons
-        onSend={() => toast.info('Send function coming soon')}
+        onSend={() => toast.info("Send function coming soon")}
         onReceive={() => setShowReceiveModal(true)}
-        onSwap={() => toast.info('Swap function coming soon')}
-        onBuy={() => toast.info('Buy function coming soon')}
+        onSwap={() => toast.info("Swap function coming soon")}
+        onBuy={() => toast.info("Buy function coming soon")}
         disabled={isLoading}
       />
 
@@ -128,7 +133,9 @@ export default function WalletSection() {
         <TokensList
           tokens={tokens}
           isLoading={isLoading}
-          onTokenClick={(token) => toast.info(`Token selected: ${token.symbol}`)}
+          onTokenClick={(token) =>
+            toast.info(`Token selected: ${token.symbol}`)
+          }
         />
       </div>
 
@@ -161,7 +168,7 @@ export default function WalletSection() {
       <ReceiveQRModal
         isOpen={showReceiveModal}
         onClose={() => setShowReceiveModal(false)}
-        publicKey={publicKey || ''}
+        publicKey={publicKey || ""}
       />
     </div>
   );

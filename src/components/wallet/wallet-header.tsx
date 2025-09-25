@@ -6,16 +6,11 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface WalletHeaderProps {
-  publicKey?: string;
-  isConnected: boolean;
+  publicKey?: string | null;
   onCopy: (text: string) => void;
 }
 
-export function WalletHeader({
-  publicKey,
-  isConnected,
-  onCopy,
-}: WalletHeaderProps) {
+export function WalletHeader({ publicKey, onCopy }: WalletHeaderProps) {
   const truncateAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };

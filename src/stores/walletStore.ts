@@ -1,5 +1,10 @@
-import { create } from 'zustand';
-import { generateWallet, getKeypairFromSecret, getAccountBalance, fundTestnetAccount } from '@/lib/stellar';
+import { create } from "zustand";
+import {
+  generateWallet,
+  getKeypairFromSecret,
+  getAccountBalance,
+  fundTestnetAccount,
+} from "@/lib/stellar";
 
 interface WalletState {
   publicKey: string | null;
@@ -43,15 +48,18 @@ export const useWalletStore = create<WalletStore>((set, get) => ({
   createWallet: () => {
     try {
       set({ isLoading: true, error: null });
-      
+
       const newWallet = generateWallet();
-      
+
       // Save to localStorage
-      localStorage.setItem('stellar-wallet', JSON.stringify({
-        publicKey: newWallet.publicKey,
-        secretKey: newWallet.secretKey,
-      }));
-      
+      localStorage.setItem(
+        "stellar-wallet",
+        JSON.stringify({
+          publicKey: newWallet.publicKey,
+          secretKey: newWallet.secretKey,
+        })
+      );
+
       set({
         publicKey: newWallet.publicKey,
         secretKey: newWallet.secretKey,
@@ -63,28 +71,31 @@ export const useWalletStore = create<WalletStore>((set, get) => ({
 
       // Start auto refresh
       get().startAutoRefresh();
-      
-    } catch (error) {
-      set({
+    } catch {
+      set((state) => ({
+        ...state,
         isLoading: false,
         error: 'Failed to create wallet. Please try again.',
-      });
+      }));
     }
   },
 
   importWallet: (secretKey: string) => {
     try {
       set({ isLoading: true, error: null });
-      
+
       const keypair = getKeypairFromSecret(secretKey);
       const publicKey = keypair.publicKey();
-      
+
       // Save to localStorage
-      localStorage.setItem('stellar-wallet', JSON.stringify({
-        publicKey,
-        secretKey,
-      }));
-      
+      localStorage.setItem(
+        "stellar-wallet",
+        JSON.stringify({
+          publicKey,
+          secretKey,
+        })
+      );
+
       set({
         publicKey,
         secretKey,
@@ -96,23 +107,23 @@ export const useWalletStore = create<WalletStore>((set, get) => ({
 
       // Start auto refresh
       get().startAutoRefresh();
-      
-    } catch (error) {
-      set({
+    } catch {
+      set((state) => ({
+        ...state,
         isLoading: false,
-        error: 'Invalid secret key. Please check and try again.',
-      });
+        error: 'Failed to import wallet. Please check your secret key.',
+      }));
     }
   },
 
   disconnect: () => {
     const { autoRefreshInterval } = get();
-    
+
     // Stop auto refresh
     if (autoRefreshInterval) {
       clearInterval(autoRefreshInterval);
     }
-    
+
     set({
       publicKey: null,
       secretKey: null,
@@ -122,37 +133,40 @@ export const useWalletStore = create<WalletStore>((set, get) => ({
       error: null,
       autoRefreshInterval: null,
     });
-    
-    localStorage.removeItem('stellar-wallet');
+
+    localStorage.removeItem("stellar-wallet");
   },
 
   refreshBalance: async () => {
     const { publicKey } = get();
     if (!publicKey) return;
-    
+
     try {
       set({ isLoading: true, error: null });
-      
+
       const balance = await getAccountBalance(publicKey);
-      
+
       set({
         balance,
         isLoading: false,
         error: null,
       });
-    } catch (error) {
-      set({
+    } catch {
+      set((state) => ({
+        ...state,
         isLoading: false,
-        error: 'Failed to fetch balance. Please try again.',
-      });
+        error: 'Failed to refresh balance. Please try again.',
+      }));
     }
   },
 
   fundAccount: async () => {
     const { publicKey, refreshBalance } = get();
-    
+
     if (!publicKey) {
-      set({ error: 'No wallet connected. Please create or import a wallet first.' });
+      set({
+        error: "No wallet connected. Please create or import a wallet first.",
+      });
       return;
     }
 
@@ -174,39 +188,41 @@ export const useWalletStore = create<WalletStore>((set, get) => ({
       } else {
         set({
           isLoading: false,
-          error: 'Account funding failed. The account may already be funded or there was a network error.',
+          error:
+            "Account funding failed. The account may already be funded or there was a network error.",
         });
       }
-    } catch (error) {
-      set({
+    } catch {
+      set((state) => ({
+        ...state,
         isLoading: false,
-        error: 'Unexpected error during funding. Please try again.',
-      });
+        error: 'Failed to fund account. Please try again.',
+      }));
     }
   },
 
   startAutoRefresh: () => {
     const { autoRefreshInterval, refreshBalance } = get();
-    
+
     // Clear existing interval if any
     if (autoRefreshInterval) {
       clearInterval(autoRefreshInterval);
     }
-    
+
     // Initial refresh
     refreshBalance();
-    
+
     // Set up auto refresh every 30 seconds
     const interval = setInterval(() => {
       refreshBalance();
     }, 30000);
-    
+
     set({ autoRefreshInterval: interval });
   },
 
   stopAutoRefresh: () => {
     const { autoRefreshInterval } = get();
-    
+
     if (autoRefreshInterval) {
       clearInterval(autoRefreshInterval);
       set({ autoRefreshInterval: null });
@@ -224,7 +240,7 @@ export const useWalletStore = create<WalletStore>((set, get) => ({
 
 // Initialize wallet from localStorage
 const initializeWallet = () => {
-  const savedWallet = localStorage.getItem('stellar-wallet');
+  const savedWallet = localStorage.getItem("stellar-wallet");
   if (savedWallet) {
     try {
       const parsed = JSON.parse(savedWallet);
@@ -233,16 +249,16 @@ const initializeWallet = () => {
         secretKey: parsed.secretKey,
         isConnected: true,
       });
-      
+
       // Start auto refresh for existing wallet
       useWalletStore.getState().startAutoRefresh();
-    } catch (error) {
+    } catch {
       localStorage.removeItem('stellar-wallet');
     }
   }
 };
 
 // Initialize on module load
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   initializeWallet();
 }
