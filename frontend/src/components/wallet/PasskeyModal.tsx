@@ -131,18 +131,18 @@ export const PasskeyModal: React.FC<PasskeyModalProps> = ({
   if (!webAuthnSupported) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-center">
+            <DialogTitle className="text-center text-base sm:text-lg">
               WebAuthn Not Supported
             </DialogTitle>
           </DialogHeader>
-          <div className="text-center p-6">
-            <p className="text-muted-foreground mb-4">
+          <div className="text-center p-4 sm:p-6">
+            <p className="text-muted-foreground mb-4 text-sm sm:text-base">
               Your browser doesn&apos;t support WebAuthn/Passkeys. Please use a
               modern browser like Chrome, Firefox, Safari, or Edge.
             </p>
-            <Button onClick={onClose} className="w-full">
+            <Button onClick={onClose} className="w-full h-10 sm:h-11 text-sm sm:text-base">
               Close
             </Button>
           </div>
@@ -153,41 +153,41 @@ export const PasskeyModal: React.FC<PasskeyModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[80vw] max-w-3xl p-4 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-md sm:max-w-lg p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-center flex items-center justify-center gap-2 text-lg">
-            <Fingerprint className="w-4 h-4 text-primary" />
+          <DialogTitle className="text-center flex items-center justify-center gap-2 text-base sm:text-lg">
+            <Fingerprint className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             Passkey Wallet
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-4 sm:space-y-6">
           {/* Create New Wallet with Passkey */}
           <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-            <CardHeader className="space-y-1 pb-2">
-              <CardTitle className="text-base text-foreground flex items-center gap-2">
-                <Plus className="w-4 h-4 text-primary" />
+            <CardHeader className="space-y-2 pb-3 p-4 sm:p-6">
+              <CardTitle className="text-sm sm:text-base text-foreground flex items-center gap-2">
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 Create New Wallet
               </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
+              <CardDescription className="text-xs sm:text-sm text-muted-foreground">
                 Create a secure Stellar wallet using your device&apos;s
                 biometric authentication
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               <Button
                 onClick={handleCreateWallet}
                 disabled={isLoading}
-                className="w-full h-9 rounded-xl px-4 text-xs"
+                className="w-full h-10 sm:h-11 rounded-xl px-4 text-sm sm:text-base"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                     <span>Creating...</span>
                   </>
                 ) : (
                   <div className="flex items-center">
-                    <Plus className="mr-2 h-3 w-3" />
+                    <Plus className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Create Wallet with Passkey</span>
                   </div>
                 )}
@@ -197,30 +197,30 @@ export const PasskeyModal: React.FC<PasskeyModalProps> = ({
 
           {/* Login with Existing Passkey */}
           <Card className="border border-border/50">
-            <CardHeader className="space-y-1 pb-2">
-              <CardTitle className="text-base text-foreground flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-muted-foreground" />
+            <CardHeader className="space-y-2 pb-3 p-4 sm:p-6">
+              <CardTitle className="text-sm sm:text-base text-foreground flex items-center gap-2">
+                <KeyRound className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                 Access Existing Wallet
               </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
+              <CardDescription className="text-xs sm:text-sm text-muted-foreground">
                 Use your existing passkey to access your Stellar wallet
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               <Button
                 onClick={handleAuthenticate}
                 disabled={isLoading}
                 variant="outline"
-                className="w-full h-9 rounded-xl px-4 text-xs"
+                className="w-full h-10 sm:h-11 rounded-xl px-4 text-sm sm:text-base"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                     <span>Authenticating...</span>
                   </>
                 ) : (
                   <div className="flex items-center">
-                    <Fingerprint className="mr-2 h-3 w-3" />
+                    <Fingerprint className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Authenticate with Passkey</span>
                   </div>
                 )}
@@ -229,7 +229,7 @@ export const PasskeyModal: React.FC<PasskeyModalProps> = ({
           </Card>
 
           {/* Info Section */}
-          <div className="text-center text-xs text-muted-foreground space-y-0">
+          <div className="text-center text-xs sm:text-sm text-muted-foreground space-y-1 px-2 mt-6">
             <p>Secure biometric authentication</p>
             <p>No passwords or seed phrases required</p>
             <p>Instant wallet creation and access</p>

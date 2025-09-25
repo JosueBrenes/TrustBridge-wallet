@@ -1,11 +1,10 @@
 "use client";
 
-import { Wallet, Plus, Download, Fingerprint } from "lucide-react";
+import { Plus, Download, Fingerprint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { PasskeyModal } from "./PasskeyModal";
 import { Meteors } from "@/components/ui/meteors";
@@ -73,7 +72,9 @@ export function WalletConnect({
             Connect with Passkey
           </Button>
 
-          <div className="text-center text-sm sm:text-base text-muted-foreground">OR</div>
+          <div className="text-center text-sm sm:text-base text-muted-foreground">
+            OR
+          </div>
 
           {/* Wallet Options */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
@@ -99,7 +100,9 @@ export function WalletConnect({
           {showImport && (
             <div className="space-y-3 sm:space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="secret-key" className="text-sm sm:text-base">Secret Key</Label>
+                <Label htmlFor="secret-key" className="text-sm sm:text-base">
+                  Secret Key
+                </Label>
                 <Input
                   id="secret-key"
                   type="password"
