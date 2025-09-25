@@ -170,8 +170,8 @@ export const PasskeyModal: React.FC<PasskeyModalProps> = ({
                 Create New Wallet
               </CardTitle>
               <CardDescription className="text-muted-foreground">
-                Create a secure Stellar wallet using your device&apos;s biometric
-                authentication
+                Create a secure Stellar wallet using your device&apos;s
+                biometric authentication
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -230,9 +230,9 @@ export const PasskeyModal: React.FC<PasskeyModalProps> = ({
 
           {/* Info Section */}
           <div className="text-center text-xs text-muted-foreground space-y-1">
-            <p>🔒 Secure biometric authentication</p>
-            <p>🚀 No passwords or seed phrases required</p>
-            <p>⚡ Instant wallet creation and access</p>
+            <p>Secure biometric authentication</p>
+            <p>No passwords or seed phrases required</p>
+            <p>Instant wallet creation and access</p>
           </div>
         </div>
       </DialogContent>
