@@ -58,6 +58,7 @@ import {
   QrCode,
 } from "lucide-react";
 import WalletHeader from "./WalletHeader";
+import Footer from "./Footer";
 
 interface AppSidebarProps {
   children: React.ReactNode;
@@ -445,6 +446,7 @@ export default function Sidebar({ children }: AppSidebarProps) {
             {children}
           </div>
         </main>
+        <Footer />
       </SidebarInset>
     </SidebarProvider>
   );

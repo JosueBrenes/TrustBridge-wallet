@@ -1,5 +1,6 @@
 "use client";
 
+import Footer from "@/components/layout/Footer";
 import WalletSidebar from "@/components/layout/WalletSidebar";
 import { useWalletStore } from "@/stores/walletStore";
 import { redirect } from "next/navigation";
