@@ -213,7 +213,8 @@ export async function swapXLMToUSDC(
           .call();
         const operations = await transactionRecord.operations();
         const pathPaymentOp = operations.records.find(
-          (op: Horizon.HorizonApi.BaseOperationResponse) => op.type === "path_payment_strict_send"
+          (op: Horizon.HorizonApi.BaseOperationResponse) =>
+            op.type === "path_payment_strict_send"
         ) as Horizon.HorizonApi.PathPaymentStrictSendOperationResponse;
         if (pathPaymentOp) {
           receivedAmount = pathPaymentOp.amount;
@@ -491,5 +492,357 @@ async function fundAccountAlternative(publicKey: string): Promise<boolean> {
   } catch {
     console.error("Error in alternative funding method");
     return false;
+  }
+}
+
+// Transaction types for better type safety
+export interface StellarTransaction {
+  id: string;
+  hash: string;
+  created_at: string;
+  source_account: string;
+  fee_charged: string | number;
+  operation_count: number;
+  envelope_xdr: string;
+  result_xdr: string;
+  result_meta_xdr: string;
+  memo?: string;
+  memo_type?: string;
+  successful: boolean;
+  paging_token: string;
+}
+
+export interface TransactionOperation {
+  id: string;
+  type: string;
+  type_i: number;
+  created_at: string;
+  transaction_hash: string;
+  source_account: string;
+  from?: string;
+  to?: string;
+  amount?: string;
+  asset_type?: string;
+  asset_code?: string;
+  asset_issuer?: string;
+  starting_balance?: string;
+  funder?: string;
+  account?: string;
+  into?: string;
+  authorize?: boolean;
+  trustor?: string;
+  trustee?: string;
+  limit?: string;
+  selling_asset_type?: string;
+  selling_asset_code?: string;
+  selling_asset_issuer?: string;
+  buying_asset_type?: string;
+  buying_asset_code?: string;
+  buying_asset_issuer?: string;
+  offer_id?: string;
+  price?: string;
+  price_r?: {
+    n: number;
+    d: number;
+  };
+}
+
+export interface ProcessedTransaction {
+  id: string;
+  hash: string;
+  date: string;
+  type: string;
+  amount: string;
+  asset: string;
+  from?: string;
+  to?: string;
+  memo?: string;
+  successful: boolean;
+  fee: string;
+  operationCount: number;
+  operations: TransactionOperation[];
+}
+
+// Get transaction history for an account
+export async function getTransactionHistory(
+  publicKey: string,
+  limit: number = 50,
+  cursor?: string
+): Promise<{
+  transactions: ProcessedTransaction[];
+  hasMore: boolean;
+  nextCursor?: string;
+}> {
+  try {
+    let transactionsCall = horizonServer
+      .transactions()
+      .forAccount(publicKey)
+      .order("desc")
+      .limit(limit)
+      .includeFailed(true);
+
+    if (cursor) {
+      transactionsCall = transactionsCall.cursor(cursor);
+    }
+
+    const transactionsResponse = await transactionsCall.call();
+
+    const processedTransactions: ProcessedTransaction[] = [];
+
+    for (const tx of transactionsResponse.records) {
+      // Get operations for this transaction
+      const operationsResponse = await horizonServer
+        .operations()
+        .forTransaction(tx.hash)
+        .call();
+
+      const operations = operationsResponse.records as TransactionOperation[];
+
+      // Process the transaction
+      const processedTx = await processTransaction(tx, operations, publicKey);
+      processedTransactions.push(processedTx);
+    }
+
+    return {
+      transactions: processedTransactions,
+      hasMore: transactionsResponse.records.length === limit,
+      nextCursor:
+        transactionsResponse.records.length > 0
+          ? transactionsResponse.records[
+              transactionsResponse.records.length - 1
+            ].paging_token
+          : undefined,
+    };
+  } catch (error) {
+    console.error("Error fetching transaction history:", error);
+    throw error;
+  }
+}
+
+// Process a single transaction to extract meaningful information
+async function processTransaction(
+  tx: StellarTransaction,
+  operations: TransactionOperation[],
+  userPublicKey: string
+): Promise<ProcessedTransaction> {
+  let transactionType = "Unknown";
+  let amount = "0";
+  let asset = "XLM";
+  let from: string | undefined;
+  let to: string | undefined;
+
+  // Analyze operations to determine transaction type and details
+  if (operations.length > 0) {
+    const mainOperation = operations[0];
+
+    switch (mainOperation.type) {
+      case "payment":
+        transactionType =
+          mainOperation.from === userPublicKey ? "Send" : "Receive";
+        amount = mainOperation.amount || "0";
+        from = mainOperation.from;
+        to = mainOperation.to;
+
+        if (mainOperation.asset_type === "native") {
+          asset = "XLM";
+        } else {
+          asset = mainOperation.asset_code || "Unknown";
+        }
+        break;
+
+      case "create_account":
+        transactionType =
+          mainOperation.funder === userPublicKey
+            ? "Account Created (Sent)"
+            : "Account Created (Received)";
+        amount = mainOperation.starting_balance || "0";
+        from = mainOperation.funder;
+        to = mainOperation.account;
+        asset = "XLM";
+        break;
+
+      case "path_payment_strict_receive":
+      case "path_payment_strict_send":
+        transactionType =
+          mainOperation.from === userPublicKey
+            ? "Path Payment (Send)"
+            : "Path Payment (Receive)";
+        amount = mainOperation.amount || "0";
+        from = mainOperation.from;
+        to = mainOperation.to;
+
+        if (mainOperation.asset_type === "native") {
+          asset = "XLM";
+        } else {
+          asset = mainOperation.asset_code || "Unknown";
+        }
+        break;
+
+      case "manage_sell_offer":
+      case "manage_buy_offer":
+        transactionType = "Trade Offer";
+        amount = mainOperation.amount || "0";
+
+        if (mainOperation.selling_asset_type === "native") {
+          asset = "XLM";
+        } else {
+          asset = mainOperation.selling_asset_code || "Unknown";
+        }
+        break;
+
+      case "change_trust":
+        transactionType = "Trust Line";
+        amount = mainOperation.limit || "0";
+        asset = mainOperation.asset_code || "Unknown";
+        break;
+
+      case "account_merge":
+        transactionType = "Account Merge";
+        from = mainOperation.account;
+        to = mainOperation.into;
+        asset = "XLM";
+        break;
+
+      case "inflation":
+        transactionType = "Inflation";
+        asset = "XLM";
+        break;
+
+      case "manage_data":
+        transactionType = "Manage Data";
+        break;
+
+      case "bump_sequence":
+        transactionType = "Bump Sequence";
+        break;
+
+      case "create_claimable_balance":
+        transactionType = "Create Claimable Balance";
+        amount = mainOperation.amount || "0";
+        if (mainOperation.asset_type === "native") {
+          asset = "XLM";
+        } else {
+          asset = mainOperation.asset_code || "Unknown";
+        }
+        break;
+
+      case "claim_claimable_balance":
+        transactionType = "Claim Balance";
+        break;
+
+      case "begin_sponsoring_future_reserves":
+        transactionType = "Begin Sponsoring";
+        break;
+
+      case "end_sponsoring_future_reserves":
+        transactionType = "End Sponsoring";
+        break;
+
+      case "revoke_sponsorship":
+        transactionType = "Revoke Sponsorship";
+        break;
+
+      case "clawback":
+        transactionType = "Clawback";
+        amount = mainOperation.amount || "0";
+        from = mainOperation.from;
+        asset = mainOperation.asset_code || "Unknown";
+        break;
+
+      case "clawback_claimable_balance":
+        transactionType = "Clawback Claimable Balance";
+        break;
+
+      case "set_trust_line_flags":
+        transactionType = "Set Trust Line Flags";
+        asset = mainOperation.asset_code || "Unknown";
+        break;
+
+      case "liquidity_pool_deposit":
+        transactionType = "LP Deposit";
+        break;
+
+      case "liquidity_pool_withdraw":
+        transactionType = "LP Withdraw";
+        break;
+
+      default:
+        transactionType = mainOperation.type
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (l) => l.toUpperCase());
+        break;
+    }
+  }
+
+  // Handle multiple operations
+  if (operations.length > 1) {
+    transactionType += ` (+${operations.length - 1} ops)`;
+  }
+
+  return {
+    id: tx.id,
+    hash: tx.hash,
+    date: tx.created_at,
+    type: transactionType,
+    amount,
+    asset,
+    from,
+    to,
+    memo: tx.memo,
+    successful: tx.successful,
+    fee: typeof tx.fee_charged === 'string' ? tx.fee_charged : tx.fee_charged.toString(),
+    operationCount: tx.operation_count,
+    operations,
+  };
+}
+
+// Get account effects (more detailed transaction information)
+export async function getAccountEffects(
+  publicKey: string,
+  limit: number = 50,
+  cursor?: string
+): Promise<any> {
+  try {
+    let effectsCall = horizonServer
+      .effects()
+      .forAccount(publicKey)
+      .order("desc")
+      .limit(limit);
+
+    if (cursor) {
+      effectsCall = effectsCall.cursor(cursor);
+    }
+
+    const effectsResponse = await effectsCall.call();
+    return effectsResponse;
+  } catch (error) {
+    console.error("Error fetching account effects:", error);
+    throw error;
+  }
+}
+
+// Get payments for an account (simplified transaction view)
+export async function getAccountPayments(
+  publicKey: string,
+  limit: number = 50,
+  cursor?: string
+): Promise<any> {
+  try {
+    let paymentsCall = horizonServer
+      .payments()
+      .forAccount(publicKey)
+      .order("desc")
+      .limit(limit)
+      .includeFailed(true);
+
+    if (cursor) {
+      paymentsCall = paymentsCall.cursor(cursor);
+    }
+
+    const paymentsResponse = await paymentsCall.call();
+    return paymentsResponse;
+  } catch (error) {
+    console.error("Error fetching account payments:", error);
+    throw error;
   }
 }
